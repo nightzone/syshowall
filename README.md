@@ -1,5 +1,5 @@
 # syshowall
-Synergy configuration collector
+Synergy Configuration Collector
 Powershell version 1.4
 
 Author:
