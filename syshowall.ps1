@@ -11,29 +11,16 @@ $applianceIP = Read-Host "Appliance IP"
 $username = Read-Host "Login"
 [SecureString]$password = read-host -AsSecureString "Password"
 
-<#Param(
-    [Parameter(Mandatory = $true, Position = 1, HelpMessage = "Appliance IP: ")]
-	$applianceIP,
-	[Parameter(Mandatory = $true, Position = 2, HelpMessage = "Login: ")]
-	$username,
-	[Parameter(Mandatory = $true, Position = 3, HelpMessage = "Password: ")]
-	[System.Security.SecureString]$password
-)#>
-#[SecureString]$password = read-host -AsSecureString "Password"
 $decryptPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
 
-#$applianceIP = "10.72.14.13"
-#$username = "Administrator"
-#$decryptPassword = "P@ssw0rd"
-
-#Set-ExecutionPolicy Unrestricted 
+#Set-ExecutionPolicy Unrestricted
 #Import-Module HPOneView.500
 
 <#if (-not (get-module HPOneView.*)) {
     #Import-Module (join-path $scriptDir "\HPOneView.200.psm1")
     Write-Host "Please install correspondent HPOneView.XXX module. Help in Readme.txt file"
 		exit
-}#>	
+}#>
 
 
 $historyDate = (Get-Date).AddDays(-5).ToString("yyyy-MM-dd")
@@ -50,9 +37,9 @@ $Appliance = @(
             ("/rest/appliance/ha-nodes",                        'ha-nodes.txt'),             # added to collect active/standby composer
             ("/rest/appliance/health-status",                   'health-status.txt'),
             ("/rest/appliance/network-interfaces",              'network-interfaces.txt'),
-    		("/rest/appliance/network-interfaces/mac-addresses",'network-interfaces-mac.txt'),
+    		    ("/rest/appliance/network-interfaces/mac-addresses",    'network-interfaces-mac.txt'),
             ("/rest/appliance/notifications/email-config",      'notification-email-config.txt'),
-    		("/rest/appliance/notifications/test-email-config", 'notification-test-email-config.txt'),
+    		    ("/rest/appliance/notifications/test-email-config",     'notification-test-email-config.txt'),
             ("/rest/appliance/progress",                        'progress.txt'),
             ("/rest/appliance/proxy-config",                    'proxy-config.txt'),                # added in v1.4
             ("/rest/appliance/settings/serviceaccess",          'settings-serviceaccess.txt'),   # attention
@@ -61,24 +48,24 @@ $Appliance = @(
             ("/rest/appliance/ssh-access",                      'ssh-access.txt'),
             ("/rest/appliance/trap-destinations",               'trap-destinations.txt'),
             ("/rest/backups",                                   'backups.txt'),
-    		("/rest/backups/config",                            'backups-config.txt'),
+    		    ("/rest/backups/config",                            'backups-config.txt'),
             ("/rest/deployment-servers/image-streamer-appliances",  'image-streamer-appliances.txt'),    # added to collect IS appliance details
             ("/rest/domains",                                   'domains.txt'),
             ("/rest/domains/schema",                            'domains-schema.txt'),
             ("/rest/firmware-drivers",                          'firmware-drivers.txt'),
             ("/rest/global-settings",                           'global-settings.txt'),
             ("/rest/licenses",                                  'licenses.txt'),
-    		("/rest/remote-syslog",                             'remote-syslog.txt'),
+    		    ("/rest/remote-syslog",                             'remote-syslog.txt'),
             ("/rest/repositories",                              'repositories.txt'),                     # added in v1.4     need to check
             ("/rest/restores",                                  'restores.txt'),
-    		("/rest/scopes",                                    'scopes.txt'),
+    		    ("/rest/scopes",                                    'scopes.txt'),
             ("/rest/version",                                   'version.txt')
 )
 
 #HP OneView Version
 $hponeviewversion = @(
        ("/rest/appliance/nodeinfo/version", "version.txt"),
-		("")
+		   ("")
 )
 
 
@@ -110,8 +97,8 @@ $security = @(
 )
 
 #Activity
-$activity = 
-@( 
+$activity =
+@(
             (("/rest/audit-logs?filter=`"DATE >= '" + $historyDate + "'`""),                    'audit-logs.txt'),
     		("/rest/alerts?count=300&sort=created:descending",                                'alerts.txt'),
     		("/rest/events?count=300&sort=created:descending",                                'events.txt'),
@@ -134,34 +121,34 @@ $enclosures= @(
     		("/rest/enclosure-groups",        'enclosure-groups.txt'),
     		("/rest/enclosures",              'enclosures.txt')
 		)
-		
+
 #Networking
 $networking = @(
-    		("/rest/connection-templates",            'connection-templates.txt'),
+    		    ("/rest/connection-templates",            'connection-templates.txt'),
             ("/rest/connections",                     'connections.txt'),
-    		("/rest/ethernet-networks",               'ethernet-networks.txt'),
-            ("/rest/fabric-managers",                 'fabric-managers.txt'),       # added in v1.4        
+    		    ("/rest/ethernet-networks",               'ethernet-networks.txt'),
+            ("/rest/fabric-managers",                 'fabric-managers.txt'),       # added in v1.4
             ("/rest/fabrics",                         'fabrics.txt'),
-    		("/rest/fc-networks",                     'fc-networks.txt'),
+    		    ("/rest/fc-networks",                     'fc-networks.txt'),
             ("/rest/fcoe-networks",                   'fcoe-networks.txt'),       # added in v1.4
             ("/rest/interconnect-link-topologies",    'interconnect-link-topologies.txt'),
             ("/rest/interconnect-types",              'interconnect-types.txt'),
-    		("/rest/interconnects",                   'interconnects.txt'),
+    		    ("/rest/interconnects",                   'interconnects.txt'),
             ("/rest/internal-link-sets",              'internal-link-sets.txt'),
-    		("/rest/logical-downlinks",               'logical-downlinks.txt'),
-    		("/rest/logical-interconnect-groups",     'logical-interconnect-groups.txt'),
-    		("/rest/logical-interconnects",           'logical-interconnects.txt'),
+    		    ("/rest/logical-downlinks",               'logical-downlinks.txt'),
+    		    ("/rest/logical-interconnect-groups",     'logical-interconnect-groups.txt'),
+    		    ("/rest/logical-interconnects",           'logical-interconnects.txt'),
             ("/rest/logical-switch-groups",           'logical-switch-groups.txt'),       # added in v1.4
             ("/rest/logical-switches",                'logical-switches.txt'),       # added in v1.4
-    		("/rest/network-sets",                    'network-sets.txt'),
-    		("/rest/switches",                        'switches.txt'),
-    		("/rest/uplink-sets",                     'uplink-sets.txt')
+    		    ("/rest/network-sets",                    'network-sets.txt'),
+  	        ("/rest/switches",                        'switches.txt'),
+    		    ("/rest/uplink-sets",                     'uplink-sets.txt')
 )
 
 #Storage
 $storage = @(
     		("/rest/storage-pools",               'storage-pools.txt'),
-            ("/rest/storage-systems",             'storage-systems.txt'),
+        ("/rest/storage-systems",             'storage-systems.txt'),
     		("/rest/storage-volumes",             'storage-volumes.txt'),
     		("/rest/storage-volume-templates",    'storage-volume-templates.txt'),
     		("/rest/storage-volume-attachments",  'storage-volume-attachments.txt')
@@ -171,15 +158,15 @@ $storage = @(
 $hypervisor = @(
     		("/rest/hypervisor-cluster-profiles", 'hypervisor-cluster-profiles.txt'),
     		("/rest/hypervisor-host-profiles",    'hypervisor-host-profiles.txt'),
-            ("/rest/hypervisor-managers",         'hypervisor-managers.txt')
+        ("/rest/hypervisor-managers",         'hypervisor-managers.txt')
 )
 
 #Deployment
 $deployment = @(
-    		("/rest/os-deployment-plans",                             'os-deployment-plans.txt'),         
+    		("/rest/os-deployment-plans",                             'os-deployment-plans.txt'),
     		("/rest/deployment-servers",                              'deployment-servers.txt'),
-            ("/rest/deployment-servers/image-streamer-appliances",    'image-streamer-appliances.txt'),
-            ("/rest/deployment-servers/network",                      'network.txt')
+        ("/rest/deployment-servers/image-streamer-appliances",    'image-streamer-appliances.txt'),
+        ("/rest/deployment-servers/network",                      'network.txt')
 )
 
 #Facilities
@@ -208,8 +195,8 @@ $uncategorized = @(
 
 # SAS Storage
 $sas= @(
-        ("/rest/drive-enclosures",                  'drive-enclosures.txt'),
-        ("/rest/sas-interconnect-types",            'sas-interconnect-types.txt'),
+      ("/rest/drive-enclosures",                  'drive-enclosures.txt'),
+      ("/rest/sas-interconnect-types",            'sas-interconnect-types.txt'),
     	("/rest/sas-interconnects",                 'sas-interconnects.txt'),
     	("/rest/sas-logical-interconnect-groups",   'sas-logical-interconnect-groups.txt'),
     	("/rest/sas-logical-interconnects",         'sas-logical-interconnects.txt'),
@@ -247,17 +234,17 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 {
     Write-Host "Extracting $ResourceName details ..." -NoNewline
 
-    foreach($resource in $Resources)    
+    foreach($resource in $Resources)
     {
 		if($resource.length -gt 0)
 		{
-        
+
 			$resourceType = Split-Path $resource[0] -Leaf
 			$OutFileName = $ResourceName + '_' + $resource[1]
 
 			try
 			{
-				$resp = Send-HPOVRequest -uri $resource[0] -method GET 
+				$resp = Send-HPOVRequest -uri $resource[0] -method GET
 				$jsonResp = $resp | ConvertTo-Json -Depth 99
 
 				#Check if the response is an array
@@ -272,15 +259,15 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 			catch
 			{
 				#Error encountered.
-			}               
-         
-        
+			}
+
+
 			if(!(Test-Path $resultDir/$ResourceName))
 			{
 				New-Item $resultDir/$ResourceName -ItemType Directory | Out-Null
 			}
 
-			$jsonResp > $resultdir/$ResourceName/$OutFileName 
+			$jsonResp > $resultdir/$ResourceName/$OutFileName
 		}
     }
 
@@ -293,7 +280,7 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 	Write-Host "`nConnecting to..... " $applianceIP
 	Write-Host "Trying to log on as" $Login "..."
 	try
-	{		
+	{
 		$connection = Connect-HPOVMgmt -appliance $applianceIP -User $Login -password $Password
     }
 	catch
@@ -303,12 +290,11 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 		$connection = $null
 	}
 
-	if ($connection -ne $null) 
+	if ($connection -ne $null)
 	{
 		Write-Host("Logged on successfully.")
-	
+
 		# Create Temporary Output Directory
-		#$scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 		$scriptDir = $MyInvocation.PSScriptRoot
 		$currentTime = Get-Date -Format "yyyyMMddHHmmss".toString()
 		$resultDir = Join-Path $scriptDir ("result" + $currentTime)
@@ -384,11 +370,11 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 			description =  'Synergy Configuration Collector'
 			application = 'syshowall PS'
 			version = $scriptVersion
-			appliance = $applianceIP            
-			login =  $Login               
+			appliance = $applianceIP
+			login =  $Login
 			timestamp = Get-Date -Format "yyyy-MM-dd hh:mm:ss".ToString()
 			eTag = $null
-		}   
+		}
 
 		$syshowallVersion | ConvertTo-Json -Depth 99 > (Join-Path $resultdir "info.txt")
 
@@ -398,7 +384,7 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 					$currentTime = Get-Date -Format "yyyyMMddHHmmss".toString()
 					$archiveName = "syconf-" + $applianceIP + "-" + $currentTime + ".zip"
 					$archivePath = Join-Path $scriptDir $archiveName
-					$folderToZip = Join-Path $resultDir *			
+					$folderToZip = Join-Path $resultDir *
 					Invoke-Command -ScriptBlock {Compress-Archive -Path $folderToZip -CompressionLevel Optimal -DestinationPath $archivePath } | Wait-Job
 					Remove-Item -Path $resultDir -Recurse
 					Write-Host "`nConfiguration saved to file:" $archiveName
@@ -416,7 +402,6 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 
 
 # Collect Configuration
-extract_all -applianceIP $applianceIP -Login $username -Password $decryptPassword 
+extract_all -applianceIP $applianceIP -Login $username -Password $decryptPassword
 
 Read-Host "`nPress <Enter> to exit..."
-
