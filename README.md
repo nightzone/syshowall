@@ -2,16 +2,20 @@ syshowall
 =========
 syshowall v1.4 PS - Synergy Configuration Collector
 
-This script used to collect HPE Synergy Appliance configuration.<br/>
-It returns .zip archive with file collection.<br/>
-For proper operation you have to install HPOneView PowerShell module that correspond to Appliance version:<br/>
-https://github.com/HewlettPackard/POSH-HPOneView
+### Features:
+* Collects HPE Synergy Appliance configuration.
+* Identifies latest supported API version for Synergy Appliance and collects data based on it.
+* Collects syshowall output to syconf-<ip_address>-<date_time>.zip archive.
 
-For example:
-If you running HPE OneView version 4.20, you have to install HPOneView.420 module.
+### Usage:
+* Run syshowall.ps1
+* Enter required parameters:
+	- Appliance IP:    IP-address or hostname of Synergy Appliance
+	- Login:           login user name in format domain\user or user
+	- Password:        user password 
+* Find collected configuration zip archive "syconf-<ip_address>-<date_time>.zip" in script directory.
+* Tested on Windows 10 and PowerShell 5.1
 
 ### Author:
-Original script was developed by HPE.<br/>
-This version edited by Sergii Oleshchenko<br/>
-Sophela, Kyiv, Ukraine<br/>
-Feedback by mail: sergii.oleshchenko@sophela.com<br/>
+Sergii Oleshchenko<br/>
+Feedback to: sergii.oleshchenko@sophela.com<br/>
