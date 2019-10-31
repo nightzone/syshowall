@@ -1,0 +1,12 @@
+# ignore config files
+syconf*
+
+# ignore iplist file
+iplist*.txt
+
+# folders
+/result*
+
+# ignore specific files
+*.zip
+*.xlsx

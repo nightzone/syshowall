@@ -1,10 +1,26 @@
 ﻿<#
 syshowall - Synergy Configuration Collector
-
-Script Originally built by HPE
-Modified by Sergii Oleshchenko
+Written by Sergii Oleshchenko
 #>
 $scriptVersion = "1.4 PS"
+
+# create class to handle SSL errors
+$code = @"
+public class SSLHandler
+{
+    public static System.Net.Security.RemoteCertificateValidationCallback GetSSLHandler()
+    {
+       return new System.Net.Security.RemoteCertificateValidationCallback((sender, certificate, chain, policyErrors) => { return true; });
+    }
+
+}
+"@
+
+#compile the class
+if (-not ([System.Management.Automation.PSTypeName]'SSLHandler').Type)
+{
+    Add-Type -TypeDefinition $code
+}
 
 Write-Host ("syshowall v" + $scriptVersion + " - Synergy Configuration Collector`n")
 $applianceIP = Read-Host "Appliance IP"
@@ -13,17 +29,18 @@ $username = Read-Host "Login"
 
 $decryptPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
 
-#Set-ExecutionPolicy Unrestricted
-#Import-Module HPOneView.500
+# For testing purpouse
+#$applianceIP = "10.72.14.xx"
+#$username = "Administrator"
+#$decryptPassword = "P@ssw0rd"
 
-<#if (-not (get-module HPOneView.*)) {
-    #Import-Module (join-path $scriptDir "\HPOneView.200.psm1")
-    Write-Host "Please install correspondent HPOneView.XXX module. Help in Readme.txt file"
-		exit
-}#>
+# Global Variable for Header parameter of Invoke-RestMethod
+$header = @{}
 
-
+# Timeframe for Audit Log
 $historyDate = (Get-Date).AddDays(-5).ToString("yyyy-MM-dd")
+
+# REST URIs and file names where to save output
 
 # Appliance URI
 $Appliance = @(
@@ -163,7 +180,7 @@ $hypervisor = @(
 
 #Deployment
 $deployment = @(
-    		("/rest/os-deployment-plans",                             'os-deployment-plans.txt'),
+    		("/rest/os-deployment-plans/",                             'os-deployment-plans.txt'),
     		("/rest/deployment-servers",                              'deployment-servers.txt'),
         ("/rest/deployment-servers/image-streamer-appliances",    'image-streamer-appliances.txt'),
         ("/rest/deployment-servers/network",                      'network.txt')
@@ -178,7 +195,7 @@ $facilities = @(
 
 #Uncategorized
 $uncategorized = @(
-    		("/rest/migratable-vc-domains",   'migratable-vc-domains.txt'),
+    		("/rest/migratable-vc-domains",  'migratable-vc-domains.txt'),
     		("/rest/unmanaged-devices",       'unmanaged-devices.txt')
 )
 
@@ -229,6 +246,87 @@ $idpools= @(
         ("/rest/id-pools/vwwn/ranges/schema",   'vwwn-ranges-schema.txt')
 )
 
+# Identifies latest supported API version
+function GetXAPIversion([String]$applianceIP)
+{
+
+  $resturi = "/rest/version"
+  $url = "https://" + $applianceIP + $resturi
+  $xapiheader = @{}
+  $xapiheader.Add("Content-Type","application/json")
+  $xapiheader.Add("Accept-Language", "en_US")
+
+  try
+  {
+    #disable SSL checks using new class
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+    $result = Invoke-RestMethod -Uri $url -Method GET -Headers $xapiheader
+    $xapi = $result.currentVersion
+  }
+  catch
+  {
+    $xapi = 0
+  }
+  finally
+  {
+    #enable ssl checks again
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+  }
+
+  return $xapi
+}
+
+# Authenticate to appliance and return SessionID key
+function create_session([String]$applianceIP, [String]$Login, [String]$Password, [int]$xapi)
+{
+  $resturi = "/rest/login-sessions"
+  $url = "https://" + $applianceIP + $resturi
+  $header.Add("Content-Type","application/json")
+  $header.Add("Accept-Language", "en_US")
+  $header.Add("X-Api-Version", $xapi.ToString())
+  $sessionID = ""
+
+  Write-Host "Trying to log on as" $Login "..."
+  # Check if domain credentials
+  if($Login.Contains("\"))
+  {
+    $domain = $Login.Split("\")[0]
+    $username = $Login.Split("\")[1]
+  }
+  else
+  {
+    $domain = ""
+    $username = $Login
+  }
+
+  $body = [Ordered]@{
+       "authLoginDomain" = $domain.ToUpper()
+       "password"        = $Password
+       "userName"        = $username
+       "loginMsgAck"     = 'true'}
+
+  $bodyJSON = ConvertTo-Json $body
+
+  try
+  {
+    #disable SSL checks using new class
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+    $result = Invoke-RestMethod -Uri $url -Method POST -Headers $header -Body $bodyJSON
+    $sessionID = $result.sessionID
+    Write-Host "Logged on successfully."
+  }
+  catch
+  {
+    Write-Host "`nLogin failed.`nPlease check credentials."
+  }
+  finally
+  {
+    #enable ssl checks again
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+  }
+
+  return $sessionID
+}
 
 function extract_data([String]$ResourceName, [System.Array]$Resources)
 {
@@ -239,12 +337,26 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 		if($resource.length -gt 0)
 		{
 
-			$resourceType = Split-Path $resource[0] -Leaf
 			$OutFileName = $ResourceName + '_' + $resource[1]
+            $filepath = Join-Path $resultdir $ResourceName | Join-Path -ChildPath $OutFileName
+            $url = "https://" + $applianceIP + $resource[0]
 
 			try
 			{
-				$resp = Send-HPOVRequest -uri $resource[0] -method GET
+                #disable SSL checks using new class
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+
+                $resp = Invoke-RestMethod -Uri $url -Method GET -Headers $header
+                # Co
+                while($resp.nextPageUri -ne $null)
+                {
+                    $url = "https://" + $applianceIP + $resp.nextPageUri
+                    $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
+                    $resp.members += $resp1.members
+                    $resp.count += $resp1.count
+                    $resp.nextPageUri = $resp1.nextPageUri
+                }
+
 				$jsonResp = $resp | ConvertTo-Json -Depth 99
 
 				#Check if the response is an array
@@ -258,8 +370,13 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 			}
 			catch
 			{
-				#Error encountered.
+                $jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
 			}
+            finally
+            {
+                #enable ssl checks again
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+            }
 
 
 			if(!(Test-Path $resultDir/$ResourceName))
@@ -267,7 +384,7 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 				New-Item $resultDir/$ResourceName -ItemType Directory | Out-Null
 			}
 
-			$jsonResp > $resultdir/$ResourceName/$OutFileName
+            $jsonResp | Out-File $filepath
 		}
     }
 
@@ -277,22 +394,24 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 {
 	# Connect to the Appliance
-	Write-Host "`nConnecting to..... " $applianceIP
-	Write-Host "Trying to log on as" $Login "..."
-	try
-	{
-		$connection = Connect-HPOVMgmt -appliance $applianceIP -User $Login -password $Password
-    }
-	catch
-	{
-		Write-Host "Connection failed.`n"
-		Write-Host "Please check network connectivity to Appliance and login credentials."
-		$connection = $null
-	}
+	Write-Host "`nConnectivity check......" $applianceIP "...... " -NoNewline
 
-	if ($connection -ne $null)
+    $xapi = GetXAPIversion -applianceIP $applianceIP
+    if ($xapi -gt 0)
+    {
+        Write-Host "Pass."
+        $sessionID = create_session -applianceIP $applianceIP -Login $Login -Password $password -xapi $xapi
+        $header.Add("Auth", $sessionID)
+    }
+    else
+    {
+        Write-Host "Fail."
+        Write-Host "Check IP settings and network connectivity to Synergy Appliance."
+        $sessionID = ""
+    }
+
+	if ($sessionID -ne "")
 	{
-		Write-Host("Logged on successfully.")
 
 		# Create Temporary Output Directory
 		$scriptDir = $MyInvocation.PSScriptRoot
@@ -362,8 +481,24 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 		extract_data -ResourceName "ID-Pools" -Resources $idpools
 
 		# Disconnect
-		Write-Host "`nDisconnect from Appliance:" $applianceIP
-		Disconnect-HPOVMgmt -ApplianceConnection $connection
+        $url = "https://" + $applianceIP + "/rest/login-sessions"
+	    try
+		{
+            #disable SSL checks using new class
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+            Write-Host "`nDisconnect from Appliance:" $applianceIP
+            $resp = Invoke-RestMethod -Uri $url -Method Delete -Headers $header
+		}
+		catch
+		{
+            Write-Host "StatusCode:" $_.Exception.Response.StatusCode.value__
+            Write-Host "StatusDescription:" $_.Exception.Response.StatusDescription
+		}
+        finally
+        {
+            #enable ssl checks again
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+        }
 
 		# Create and write info.txt
 		$syshowallVersion = [pscustomobject]@{
@@ -385,7 +520,7 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 					$archiveName = "syconf-" + $applianceIP + "-" + $currentTime + ".zip"
 					$archivePath = Join-Path $scriptDir $archiveName
 					$folderToZip = Join-Path $resultDir *
-					Invoke-Command -ScriptBlock {Compress-Archive -Path $folderToZip -CompressionLevel Optimal -DestinationPath $archivePath } | Wait-Job
+					Invoke-Command -ScriptBlock {Compress-Archive -Path $folderToZip -CompressionLevel Optimal -DestinationPath $archivePath} | Wait-Job
 					Remove-Item -Path $resultDir -Recurse
 					Write-Host "`nConfiguration saved to file:" $archiveName
 		}
@@ -398,8 +533,6 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 }
 
 # MAIN SCRIPT
-
-
 
 # Collect Configuration
 extract_all -applianceIP $applianceIP -Login $username -Password $decryptPassword
