@@ -22,6 +22,14 @@ if (-not ([System.Management.Automation.PSTypeName]'SSLHandler').Type)
     Add-Type -TypeDefinition $code
 }
 
+# to support zipping 
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+# Save Progress Preference and set it to silent
+$oldProgressPreference = $progressPreference 
+$progressPreference = 'SilentlyContinue'
+
+
 Write-Host ("syshowall v" + $scriptVersion + " - Synergy Configuration Collector`n")
 $applianceIP = Read-Host "Appliance IP"
 $username = Read-Host "Login"
@@ -116,9 +124,9 @@ $security = @(
 #Activity
 $activity =
 @(
-            (("/rest/audit-logs?filter=`"DATE >= '" + $historyDate + "'`""),                    'audit-logs.txt'),
-    		("/rest/alerts?count=300&sort=created:descending",                                'alerts.txt'),
-    		("/rest/events?count=300&sort=created:descending",                                'events.txt'),
+            (("/rest/audit-logs?filter=`"DATE >= '" + $historyDate + "'`""),                 'audit-logs.txt'),
+    		("/rest/alerts?start=0&count=300&sort=created:descending",                       'alerts.txt'),
+    		("/rest/events?start=0&count=300&sort=created:descending",                       'events.txt'),
             ("/rest/tasks?sort=created:descending&filter=`"created ge {2 days ago}`"",       'tasks.txt')
 )
 
@@ -330,7 +338,7 @@ function create_session([String]$applianceIP, [String]$Login, [String]$Password,
 
 function extract_data([String]$ResourceName, [System.Array]$Resources)
 {
-    Write-Host "Extracting $ResourceName details ..." -NoNewline
+    Write-Host "Extracting $ResourceName details....... " -NoNewline
 
     foreach($resource in $Resources)
     {
@@ -341,14 +349,29 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
             $filepath = Join-Path $resultdir $ResourceName | Join-Path -ChildPath $OutFileName
             $url = "https://" + $applianceIP + $resource[0]
 
+            #get count value
+            $countMax = 100000
+            if ($resource[0].Contains("?"))
+            {
+                $params = $resource[0].split("?")[1]
+                $params_list = $params.split("&")
+                foreach ($param in $params_list)
+                {
+                    if($param.Contains("count"))
+                    {
+                        $countMax = [int]$param.split("=")[1]
+                    }
+                }
+            }
+
 			try
 			{
                 #disable SSL checks using new class
                 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
 
                 $resp = Invoke-RestMethod -Uri $url -Method GET -Headers $header
-                # Co
-                while($resp.nextPageUri -ne $null)
+
+                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
                     $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
@@ -388,7 +411,7 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 		}
     }
 
-    Write-Host "`t`t Complete"
+    Write-Host "Done"
 }
 
 function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
@@ -515,14 +538,29 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 
 		Start-Sleep -Seconds 5
 
-		if(Test-Path ($resultDir)){
+		if(Test-Path $resultDir){
 					$currentTime = Get-Date -Format "yyyyMMddHHmmss".toString()
 					$archiveName = "syconf-" + $applianceIP + "-" + $currentTime + ".zip"
 					$archivePath = Join-Path $scriptDir $archiveName
-					$folderToZip = Join-Path $resultDir *
-					Invoke-Command -ScriptBlock {Compress-Archive -Path $folderToZip -CompressionLevel Optimal -DestinationPath $archivePath} | Wait-Job
-					Remove-Item -Path $resultDir -Recurse
-					Write-Host "`nConfiguration saved to file:" $archiveName
+                   
+                    if(Test-Path $archivePath){
+	                     Remove-Item -Path $archivePath 
+                    }
+                    try
+                    {
+                        Invoke-Command -ScriptBlock {[System.IO.Compression.ZipFile]::CreateFromDirectory($resultDir, $archivePath)} | Wait-Job
+                        Remove-Item -Path $resultDir -Recurse
+                        Write-Host "`nConfiguration saved to file:" $archiveName
+                    }
+                    catch
+                    {
+                        Write-Host "`nCannot create .zip archive"
+                    }
+
+					#$folderToZip = Join-Path $resultDir *
+					#Invoke-Command -ScriptBlock {Compress-Archive -Path $folderToZip -CompressionLevel Optimal -DestinationPath $archivePath} | Wait-Job
+					#Remove-Item -Path $resultDir -Recurse
+					#Write-Host "`nConfiguration saved to file:" $archiveName
 		}
 		else {
 			# Folder cannot be removed
@@ -536,5 +574,8 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 
 # Collect Configuration
 extract_all -applianceIP $applianceIP -Login $username -Password $decryptPassword
+
+# Set progress Preference back
+$progressPreference = $oldProgressPreference
 
 Read-Host "`nPress <Enter> to exit..."
