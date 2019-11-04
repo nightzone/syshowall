@@ -25,25 +25,8 @@ if (-not ([System.Management.Automation.PSTypeName]'SSLHandler').Type)
 # to support zipping 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-# Save Progress Preference and set it to silent
-$oldProgressPreference = $progressPreference 
-$progressPreference = 'SilentlyContinue'
-
-
 Write-Host ("syshowall v" + $scriptVersion + " - Synergy Configuration Collector`n")
-$applianceIP = Read-Host "Appliance IP"
-$username = Read-Host "Login"
-[SecureString]$password = read-host -AsSecureString "Password"
 
-$decryptPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
-
-# For testing purpouse
-#$applianceIP = "10.72.14.xx"
-#$username = "Administrator"
-#$decryptPassword = "P@ssw0rd"
-
-# Global Variable for Header parameter of Invoke-RestMethod
-$header = @{}
 
 # Timeframe for Audit Log
 $historyDate = (Get-Date).AddDays(-5).ToString("yyyy-MM-dd")
@@ -436,8 +419,12 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 	if ($sessionID -ne "")
 	{
 
+        # Save Progress Preference and set it to silent
+        $oldProgressPreference = $progressPreference 
+        $progressPreference = 'SilentlyContinue'
+
 		# Create Temporary Output Directory
-		$scriptDir = $MyInvocation.PSScriptRoot
+		$scriptDir = $PSScriptRoot
 		$currentTime = Get-Date -Format "yyyyMMddHHmmss".toString()
 		$resultDir = Join-Path $scriptDir ("result" + $currentTime)
 
@@ -534,7 +521,7 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 			eTag = $null
 		}
 
-		$syshowallVersion | ConvertTo-Json -Depth 99 > (Join-Path $resultdir "info.txt")
+		$syshowallVersion | ConvertTo-Json -Depth 99 | Out-File (Join-Path $resultdir "info.txt")
 
 		Start-Sleep -Seconds 5
 
@@ -555,12 +542,15 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
                     catch
                     {
                         Write-Host "`nCannot create .zip archive"
+                        Write-Host "Configuration located in folder:" $resultDir.Split("\")[-1]
+                    }
+                    finally
+                    {
+                        # Set progress Preference back
+                        $progressPreference = $oldProgressPreference
+
                     }
 
-					#$folderToZip = Join-Path $resultDir *
-					#Invoke-Command -ScriptBlock {Compress-Archive -Path $folderToZip -CompressionLevel Optimal -DestinationPath $archivePath} | Wait-Job
-					#Remove-Item -Path $resultDir -Recurse
-					#Write-Host "`nConfiguration saved to file:" $archiveName
 		}
 		else {
 			# Folder cannot be removed
@@ -572,10 +562,48 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 
 # MAIN SCRIPT
 
-# Collect Configuration
-extract_all -applianceIP $applianceIP -Login $username -Password $decryptPassword
+# Global Variable for Header parameter of Invoke-RestMethod
+$header = @{}
 
-# Set progress Preference back
-$progressPreference = $oldProgressPreference
+# Get path for iplist.txt file
+$scriptDir = $PSScriptRoot
+$iplistPath = Join-Path $scriptDir "iplist.txt"
+# if iplist.txt exist - collect configs from systems in file
+if(Test-Path $iplistPath) 
+{
+    Write-Host "List of IP 'iplist.txt' found. `nPlease enter credentials.`n"
 
-Read-Host "`nPress <Enter> to exit..."
+    $username = Read-Host "Login"
+    [SecureString]$password = Read-Host -AsSecureString "Password"
+    $decryptPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
+
+    foreach($ip in (Get-Content $iplistPath))
+    {
+        $header = @{}
+        
+        extract_all -applianceIP $ip -Login $username -Password $decryptPassword
+
+        Write-Host "`n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+    }
+}
+else  # collect config for single system
+{
+
+    while (-not $header['Auth'])
+    {
+
+        $applianceIP = Read-Host "Appliance IP"
+        $username = Read-Host "Login"
+        [SecureString]$password = read-host -AsSecureString "Password"
+        $decryptPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($password))
+
+        $header = @{}
+
+        # Collect Configuration
+        extract_all -applianceIP $applianceIP -Login $username -Password $decryptPassword
+    
+        Write-Host "`n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`n"        
+    }
+}
+
+Read-Host "Press <Enter> to exit..." 
