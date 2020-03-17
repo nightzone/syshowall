@@ -2,7 +2,7 @@
 syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 #>
-$scriptVersion = "1.4 PS"
+$scriptVersion = "1.4.1 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -15,6 +15,9 @@ public class SSLHandler
 
 }
 "@
+
+# added for JavaScript serialized object
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")
 
 #compile the class
 if (-not ([System.Management.Automation.PSTypeName]'SSLHandler').Type)
@@ -45,9 +48,11 @@ $Appliance = @(
             ("/rest/appliance/ha-nodes",                        'ha-nodes.txt'),             # added to collect active/standby composer
             ("/rest/appliance/health-status",                   'health-status.txt'),
             ("/rest/appliance/network-interfaces",              'network-interfaces.txt'),
-    		    ("/rest/appliance/network-interfaces/mac-addresses",    'network-interfaces-mac.txt'),
+    	    ("/rest/appliance/network-interfaces/mac-addresses",    'network-interfaces-mac.txt'),
+            ("/rest/appliance/nodeinfo/status",                'nodeinfo-status.txt'),
+            ("/rest/appliance/nodeinfo/version",               'nodeinfo-version.txt'),
             ("/rest/appliance/notifications/email-config",      'notification-email-config.txt'),
-    		    ("/rest/appliance/notifications/test-email-config",     'notification-test-email-config.txt'),
+    	    ("/rest/appliance/notifications/test-email-config",     'notification-test-email-config.txt'),            
             ("/rest/appliance/progress",                        'progress.txt'),
             ("/rest/appliance/proxy-config",                    'proxy-config.txt'),                # added in v1.4
             ("/rest/appliance/settings/serviceaccess",          'settings-serviceaccess.txt'),   # attention
@@ -56,17 +61,20 @@ $Appliance = @(
             ("/rest/appliance/ssh-access",                      'ssh-access.txt'),
             ("/rest/appliance/trap-destinations",               'trap-destinations.txt'),
             ("/rest/backups",                                   'backups.txt'),
-    		    ("/rest/backups/config",                            'backups-config.txt'),
+    		("/rest/backups/config",                            'backups-config.txt'),
             ("/rest/deployment-servers/image-streamer-appliances",  'image-streamer-appliances.txt'),    # added to collect IS appliance details
             ("/rest/domains",                                   'domains.txt'),
             ("/rest/domains/schema",                            'domains-schema.txt'),
-            ("/rest/firmware-drivers",                          'firmware-drivers.txt'),
+            ("/rest/firmware-drivers",                          'firmware-drivers.txt'), 
             ("/rest/global-settings",                           'global-settings.txt'),
+            ("/rest/hardware-compliance",                       'hardware-compliance.txt'), 
+            ("/rest/hw-appliances",                             'hw-appliances.txt'),  
+            ("/rest/index/resources?query=`"NOT scopeUris:NULL`"", 'scopes-resources.txt'),
             ("/rest/licenses",                                  'licenses.txt'),
-    		    ("/rest/remote-syslog",                             'remote-syslog.txt'),
+    		("/rest/remote-syslog",                             'remote-syslog.txt'),
             ("/rest/repositories",                              'repositories.txt'),                     # added in v1.4     need to check
             ("/rest/restores",                                  'restores.txt'),
-    		    ("/rest/scopes",                                    'scopes.txt'),
+    		("/rest/scopes",                                    'scopes.txt'),  
             ("/rest/version",                                   'version.txt')
 )
 
@@ -82,7 +90,8 @@ $fcsans = @(
             ("/rest/fc-sans/device-managers",   'device-managers.txt'),
             ("/rest/fc-sans/managed-sans",      'managed-sans.txt'),
             ("/rest/fc-sans/providers",         'providers.txt'),
-            ("/rest/fc-sans/endpoints",         'endpoints.txt')
+            ("/rest/fc-sans/endpoints",         'endpoints.txt'),
+            ("/rest/fc-sans/zones",             'zones.txt')
 )
 
 # Security
@@ -98,6 +107,8 @@ $security = @(
             ("/rest/logindomains/global-settings",              'logindomains-global-settings.txt'),
             ("/rest/logindomains/grouptorolemapping",           'logindomains-grouptorolemapping.txt'),
             ("/rest/roles",                                     'roles.txt'),
+            ("/rest/secure-data-at-rest",                       'secure-data-at-rest.txt'),
+            ("/rest/security-standards/modes",                  'security-modes.txt'),
             ("/rest/security-standards/modes/current-mode",     'security-current-mode.txt'),
             ("/rest/security-standards/protocols",              'security-protocols.txt'),
             ("/rest/appliance/sshhostkeys",                     'sshhostkeys.txt'),
@@ -108,6 +119,7 @@ $security = @(
 $activity =
 @(
             (("/rest/audit-logs?filter=`"DATE >= '" + $historyDate + "'`""),                 'audit-logs.txt'),
+            (("/rest/audit-logs/settings"),                                                  'audit-logs-settings.txt'),
     		("/rest/alerts?start=0&count=300&sort=created:descending",                       'alerts.txt'),
     		("/rest/events?start=0&count=300&sort=created:descending",                       'events.txt'),
             ("/rest/tasks?sort=created:descending&filter=`"created ge {2 days ago}`"",       'tasks.txt')
@@ -120,7 +132,8 @@ $servers = @(
     		("/rest/server-hardware-types",        'server-hardware-types.txt'),
     		("/rest/server-profiles",              'server-profiles.txt'),
     		("/rest/server-profile-templates",     'server-profile-templates.txt'),
-    		("/rest/server-hardware/*/firmware",   'firmware.txt')                    # added to collect server FW details
+    		("/rest/server-hardware/*/firmware",   'firmware.txt'),                    # added to collect server FW details
+            ("/rest/rack-managers",                'rack-managers.txt')
 )
 
 #Enclosures
@@ -132,31 +145,32 @@ $enclosures= @(
 
 #Networking
 $networking = @(
-    		    ("/rest/connection-templates",            'connection-templates.txt'),
+    		("/rest/connection-templates",            'connection-templates.txt'),
             ("/rest/connections",                     'connections.txt'),
-    		    ("/rest/ethernet-networks",               'ethernet-networks.txt'),
+    		("/rest/ethernet-networks",               'ethernet-networks.txt'),
             ("/rest/fabric-managers",                 'fabric-managers.txt'),       # added in v1.4
             ("/rest/fabrics",                         'fabrics.txt'),
-    		    ("/rest/fc-networks",                     'fc-networks.txt'),
+    		("/rest/fc-networks",                     'fc-networks.txt'),
             ("/rest/fcoe-networks",                   'fcoe-networks.txt'),       # added in v1.4
             ("/rest/interconnect-link-topologies",    'interconnect-link-topologies.txt'),
             ("/rest/interconnect-types",              'interconnect-types.txt'),
-    		    ("/rest/interconnects",                   'interconnects.txt'),
+    		("/rest/interconnects",                   'interconnects.txt'),
             ("/rest/internal-link-sets",              'internal-link-sets.txt'),
-    		    ("/rest/logical-downlinks",               'logical-downlinks.txt'),
-    		    ("/rest/logical-interconnect-groups",     'logical-interconnect-groups.txt'),
-    		    ("/rest/logical-interconnects",           'logical-interconnects.txt'),
+    		("/rest/logical-downlinks",               'logical-downlinks.txt'),
+    		("/rest/logical-interconnect-groups",     'logical-interconnect-groups.txt'),
+    		("/rest/logical-interconnects",           'logical-interconnects.txt'),
             ("/rest/logical-switch-groups",           'logical-switch-groups.txt'),       # added in v1.4
             ("/rest/logical-switches",                'logical-switches.txt'),       # added in v1.4
-    		    ("/rest/network-sets",                    'network-sets.txt'),
+    		("/rest/network-sets",                    'network-sets.txt'),
+            ("/rest/switch-types",                    'switch-types.txt'),
   	        ("/rest/switches",                        'switches.txt'),
-    		    ("/rest/uplink-sets",                     'uplink-sets.txt')
+    		("/rest/uplink-sets",                     'uplink-sets.txt')
 )
 
 #Storage
 $storage = @(
     		("/rest/storage-pools",               'storage-pools.txt'),
-        ("/rest/storage-systems",             'storage-systems.txt'),
+            ("/rest/storage-systems",             'storage-systems.txt'),
     		("/rest/storage-volumes",             'storage-volumes.txt'),
     		("/rest/storage-volume-templates",    'storage-volume-templates.txt'),
     		("/rest/storage-volume-attachments",  'storage-volume-attachments.txt')
@@ -166,15 +180,15 @@ $storage = @(
 $hypervisor = @(
     		("/rest/hypervisor-cluster-profiles", 'hypervisor-cluster-profiles.txt'),
     		("/rest/hypervisor-host-profiles",    'hypervisor-host-profiles.txt'),
-        ("/rest/hypervisor-managers",         'hypervisor-managers.txt')
+            ("/rest/hypervisor-managers",         'hypervisor-managers.txt')
 )
 
 #Deployment
 $deployment = @(
-    		("/rest/os-deployment-plans/",                             'os-deployment-plans.txt'),
+    		("/rest/os-deployment-plans/",                            'os-deployment-plans.txt'),
     		("/rest/deployment-servers",                              'deployment-servers.txt'),
-        ("/rest/deployment-servers/image-streamer-appliances",    'image-streamer-appliances.txt'),
-        ("/rest/deployment-servers/network",                      'network.txt')
+            ("/rest/deployment-servers/image-streamer-appliances",    'image-streamer-appliances.txt'),
+            ("/rest/deployment-servers/network",                      'network.txt')
 )
 
 #Facilities
@@ -217,12 +231,14 @@ $sa = @(
             ("/rest/support/channel-partners",              'channel-partners.txt'),
             ("/rest/support/configuration",                 'configuration.txt'),
             ("/rest/support/contacts",                      'contacts.txt'),
+            ("/rest/support/entitlements",                   'entitlements.txt'),
             # ("/rest/support/datacenters",                   'datacenters.txt'),
             # ("/rest/support/data-collections",              'data-collections.txt'),
             # ("/rest/support/enclosures",                    'enclosures.txt'),
             ("/rest/support/portal-registration",           'portal-registration.txt'),
             ("/rest/support/registration",                  'registration.txt'),
-            ("/rest/support/schedules",                     'schedules.txt')
+            ("/rest/support/schedules",                     'schedules.txt'),
+            ("/rest/support/sites/default",                 'sites-default.txt')
             # ("/rest/support/server-hardware",               'server-hardware.txt'),
             # ("/rest/support/sites",                         'sites.txt')
 )
@@ -232,8 +248,11 @@ $idpools= @(
         ("/rest/id-pools/schema",               'schema.txt'),
         ("/rest/id-pools/ipv4/subnets",         'subnets.txt'),
         ("/rest/id-pools/ipv4/ranges/schema",   'ipv4-ranges-schema.txt'),
+        ("/rest/id-pools/vmac",                 'vmac.txt'),
         ("/rest/id-pools/vmac/ranges/schema",   'vmac-ranges-schema.txt'),
+        ("/rest/id-pools/vsn",                  'vsn.txt'),
         ("/rest/id-pools/vsn/ranges/schema",    'vsn-ranges-schema.txt'),
+        ("/rest/id-pools/vwwn",                 'vwwn.txt'),
         ("/rest/id-pools/vwwn/ranges/schema",   'vwwn-ranges-schema.txt')
 )
 
@@ -320,6 +339,85 @@ function create_session([String]$applianceIP, [String]$Login, [String]$Password,
 }
 
 function extract_data([String]$ResourceName, [System.Array]$Resources)
+{
+    Write-Host "Extracting $ResourceName details....... " -NoNewline
+
+    foreach($resource in $Resources)
+    {
+		if($resource.length -gt 0)
+		{
+
+			$OutFileName = $ResourceName + '_' + $resource[1]
+            $filepath = Join-Path $resultdir $ResourceName | Join-Path -ChildPath $OutFileName
+            $url = "https://" + $applianceIP + $resource[0]
+
+            #get count value
+            $countMax = 100000
+            if ($resource[0].Contains("?"))
+            {
+                $params = $resource[0].split("?")[1]
+                $params_list = $params.split("&")
+                foreach ($param in $params_list)
+                {
+                    if($param.Contains("count"))
+                    {
+                        $countMax = [int]$param.split("=")[1]
+                    }
+                }
+            }
+
+			try
+			{
+                #disable SSL checks using new class
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+
+                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
+                $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
+
+                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax))
+                {
+                    $url = "https://" + $applianceIP + $resp.nextPageUri
+                    $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
+                    $resp.members += $resp1.members
+                    $resp.count += $resp1.count
+                    $resp.nextPageUri = $resp1.nextPageUri
+                }
+
+				$jsonResp = $resp | ConvertTo-Json -Depth 99 
+                
+				#Check if the response is an array
+			<#	if($jsonResp.members.value.count -gt 0)
+				{
+				   for($index = 0; $index -lt $jsonResp.members.value.count; $index++)
+				   {
+					   Write-Host $jsonResp.members.value[$index]
+				   }
+				}#>
+			}
+			catch
+			{
+                $jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
+			}
+            finally
+            {
+                #enable ssl checks again
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+            }
+
+
+			if(!(Test-Path $resultDir/$ResourceName))
+			{
+				New-Item $resultDir/$ResourceName -ItemType Directory | Out-Null
+			}
+           # Write-Host $jsonResp
+            $jsonResp | Out-File $filepath
+		}
+    }
+
+    Write-Host "Done"
+}
+
+function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$RestRequest, [String]$SearchParameter, [Integer]$UriLength)
 {
     Write-Host "Extracting $ResourceName details....... " -NoNewline
 
@@ -571,7 +669,13 @@ $iplistPath = Join-Path $scriptDir "iplist.txt"
 # if iplist.txt exist - collect configs from systems in file
 if(Test-Path $iplistPath) 
 {
-    Write-Host "List of IP 'iplist.txt' found. `nPlease enter credentials.`n"
+    Write-Host "List of IP 'iplist.txt' found:"
+
+    foreach($ip in (Get-Content $iplistPath))
+    {
+        Write-Host("   $ip")
+    }
+    Write-Host "`nPlease enter credentials.`n"
 
     $username = Read-Host "Login"
     [SecureString]$password = Read-Host -AsSecureString "Password"
@@ -579,11 +683,14 @@ if(Test-Path $iplistPath)
 
     foreach($ip in (Get-Content $iplistPath))
     {
-        $header = @{}
+        if($ip.length -gt 2)
+        {
+            $header = @{}
         
-        extract_all -applianceIP $ip -Login $username -Password $decryptPassword
+            extract_all -applianceIP $ip -Login $username -Password $decryptPassword
 
-        Write-Host "`n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            Write-Host "`n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        }
     }
 }
 else  # collect config for single system
