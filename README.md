@@ -1,6 +1,6 @@
 syshowall
 =========
-syshowall v1.4 PS - Synergy Configuration Collector
+syshowall v1.6 PS - Synergy Configuration Collector
 
 ### Features:
 * Collects HPE Synergy Appliance configuration.

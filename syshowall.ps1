@@ -2,7 +2,7 @@
 syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 #>
-$scriptVersion = "1.4.1 PS"
+$scriptVersion = "1.6 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -385,14 +385,6 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 
 				$jsonResp = $resp | ConvertTo-Json -Depth 99 
                 
-				#Check if the response is an array
-			<#	if($jsonResp.members.value.count -gt 0)
-				{
-				   for($index = 0; $index -lt $jsonResp.members.value.count; $index++)
-				   {
-					   Write-Host $jsonResp.members.value[$index]
-				   }
-				}#>
 			}
 			catch
 			{
@@ -417,24 +409,18 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
     Write-Host "Done"
 }
 
-function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$RestRequest, [String]$SearchParameter, [Integer]$UriLength)
+function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$RestRequest, [String]$SearchParameter, [Int]$UriLength)
 {
-    Write-Host "Extracting $ResourceName details....... " -NoNewline
-
-    foreach($resource in $Resources)
-    {
-		if($resource.length -gt 0)
-		{
-
-			$OutFileName = $ResourceName + '_' + $resource[1]
+  
+			$OutFileName = $ResourceName + '_' + $FileName
             $filepath = Join-Path $resultdir $ResourceName | Join-Path -ChildPath $OutFileName
-            $url = "https://" + $applianceIP + $resource[0]
+            $url = "https://" + $applianceIP + $RestRequest
 
             #get count value
             $countMax = 100000
-            if ($resource[0].Contains("?"))
+            if ($RestRequest.Contains("?"))
             {
-                $params = $resource[0].split("?")[1]
+                $params = $RestRequest.split("?")[1]
                 $params_list = $params.split("&")
                 foreach ($param in $params_list)
                 {
@@ -450,27 +436,73 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                 #disable SSL checks using new class
                 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
 
-                $resp = Invoke-RestMethod -Uri $url -Method GET -Headers $header
+                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
+                $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                 while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
-                    $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
                     $resp.nextPageUri = $resp1.nextPageUri
                 }
 
-				$jsonResp = $resp | ConvertTo-Json -Depth 99
+                $uriList = @()
 
-				#Check if the response is an array
-				if($jsonResp.members.value.count -gt 0)
-				{
-				   for($index = 0; $index -lt $jsonResp.members.value.count; $index++)
-				   {
-					   Write-Host $jsonResp.members.value[$index]
-				   }
-				}
+                if($resp.members -ne $null)
+                {
+                    # extract uris for key in each member
+                   foreach ($item in $resp.members)
+                   {
+                        $uri_data = $item.$SearchParameter
+                        $uriList += $uri_data
+                   }
+                }
+                else
+                {
+                     $uri_data = $resp.$SearchParameter
+                     $uriList += $uri_data                    
+                }
+                    # get required uri length, 0 means complete uri
+                   if ($UriLength -gt 0)
+                   {
+                        for($i=0; $i -lt $uriList.length; $i++)
+                        {   
+                            $splitList = $uriList[$i].split("/")[0..$UriLength]                                                     
+                            $uriList[$i] = $splitList -join "/"
+                        }
+                   }
+                   # leave only unique uries
+                   $uriList = $uriList | Get-Unique
+                    
+
+              $data = [Ordered]@{
+                   "count"       = 0
+                   "members"     = @()
+                   "eTag"        = '' }
+
+                foreach($uri in $uriList)
+                {
+                    $url = "https://" + $applianceIP + $uri
+                    $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
+
+                   if ($resp.members -ne $null)
+                   {
+                      $data.members += $resp.members
+                      $data.count += $resp.count
+                   }
+                   else
+                   {
+                      $data.members += $resp
+                      $data.count += 1
+                   }                                       
+                }
+
+				$jsonResp = $data | ConvertTo-Json -Depth 99 
+                
 			}
 			catch
 			{
@@ -489,10 +521,7 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
 			}
 
             $jsonResp | Out-File $filepath
-		}
-    }
 
-    Write-Host "Done"
 }
 
 function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
@@ -587,6 +616,18 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 
 		#id-pools
 		extract_data -ResourceName "ID-Pools" -Resources $idpools
+
+
+        #Extract Additional Information
+        Write-Host "Extracting few more details....... " -NoNewline
+
+        extract_data_by_uri -ResourceName "SAS-Storage" -FileName "sas-logical-drive-enclosures.txt" -RestRequest "/rest/sas-logical-jbods" -SearchParameter "logicalDriveBayUris" -UriLength 4
+        extract_data_by_uri -ResourceName "ID-Pools" -FileName "ipv4-ranges.txt" -RestRequest "/rest/id-pools/ipv4/subnets" -SearchParameter "rangeUris" -UriLength 0
+        extract_data_by_uri -ResourceName "ID-Pools" -FileName "vmac-ranges.txt" -RestRequest "/rest/id-pools/vmac" -SearchParameter "rangeUris" -UriLength 0
+        extract_data_by_uri -ResourceName "ID-Pools" -FileName "vsn-ranges.txt" -RestRequest "/rest/id-pools/vsn" -SearchParameter "rangeUris" -UriLength 0
+        extract_data_by_uri -ResourceName "ID-Pools" -FileName "vwwn-ranges.txt" -RestRequest "/rest/id-pools/vwwn" -SearchParameter "rangeUris" -UriLength 0
+
+        Write-Host "Done"
 
 		# Disconnect
         $url = "https://" + $applianceIP + "/rest/login-sessions"
