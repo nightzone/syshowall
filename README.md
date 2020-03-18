@@ -1,11 +1,11 @@
 syshowall
 =========
-syshowall v1.6 PS - Synergy Configuration Collector
+syshowall v1.7 PS - Synergy Configuration Collector
 
 ### Features:
 * Collects HPE Synergy Appliance configuration.
 * Identifies latest supported API version for Synergy Appliance and collects data based on it.
-* Collects syshowall output to syconf-<ip_address>-<date_time>.zip archive.
+* Collects syshowall output to syconf-<ip_address>-<timestamp>.zip archive.
 
 ### Usage:
 * Run syshowall.ps1
@@ -13,7 +13,7 @@ syshowall v1.6 PS - Synergy Configuration Collector
 	- Appliance IP:    IP-address or hostname of Synergy Appliance
 	- Login:           login user name in format domain\user or user
 	- Password:        user password
-* Find collected configuration zip archive "syconf-<ip_address>-<date_time>.zip" in script directory.
+* Find collected configuration zip archive "syconf-<ip_address>-<timestamp>.zip" in script directory.
 * Possible to use list of appliances. Just create iplist.txt in script directory and put single Appliance IP per line.
 
 ### Requirements:
@@ -23,4 +23,4 @@ syshowall v1.6 PS - Synergy Configuration Collector
 
 ### Author:
 Sergii Oleshchenko<br/>
-Feedback to: sergii.oleshchenko@sophela.com<br/>
+Feedback to: sergii.oleshchenko@hpe.ua<br/>

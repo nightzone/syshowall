@@ -2,7 +2,7 @@
 syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 #>
-$scriptVersion = "1.6 PS"
+$scriptVersion = "1.7 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -374,13 +374,17 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
                 $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
-                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax))
+                $count = 0
+                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 400))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
-                    $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
+                 #   $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
                     $resp.nextPageUri = $resp1.nextPageUri
+                    $count += 1
                 }
 
 				$jsonResp = $resp | ConvertTo-Json -Depth 99 
@@ -449,6 +453,13 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                     $resp.nextPageUri = $resp1.nextPageUri
                 }
 
+                # check if remote support collection
+                $isRScollection = $false
+                if ($SearchParameter.Contains("hwuri"))
+                {
+                   $isRScollection = $true         
+                }
+
                 $uriList = @()
 
                 if($resp.members -ne $null)
@@ -458,24 +469,37 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                    {
                         $uri_data = $item.$SearchParameter
                         $uriList += $uri_data
+
+                        # for RS leave only devices with entitlement
+                        if ($isRScollection -and ($item.entitlementStatus -eq $null))
+                        {
+                           $uriList = $uriList -ne $uri_data
+                        }
                    }
                 }
                 else
                 {
                      $uri_data = $resp.$SearchParameter
-                     $uriList += $uri_data                    
+                     $uriList += $uri_data
                 }
-                    # get required uri length, 0 means complete uri
-                   if ($UriLength -gt 0)
-                   {
-                        for($i=0; $i -lt $uriList.length; $i++)
-                        {   
-                            $splitList = $uriList[$i].split("/")[0..$UriLength]                                                     
-                            $uriList[$i] = $splitList -join "/"
-                        }
-                   }
-                   # leave only unique uries
-                   $uriList = $uriList | Get-Unique
+
+                # for RS insert 'support' to uri
+                if ($isRScollection)
+                {
+                   $uriList = $uriList.ForEach({$_.insert(6,'support/')}) 
+                }
+
+                # get required uri length, 0 means complete uri
+                if ($UriLength -gt 0)
+                {
+                     for($i=0; $i -lt $uriList.length; $i++)
+                     {   
+                         $splitList = $uriList[$i].split("/")[0..$UriLength]                                                     
+                         $uriList[$i] = $splitList -join "/"
+                     }
+                }
+                # leave only unique uries
+                $uriList = $uriList | Get-Unique
                     
 
               $data = [Ordered]@{
@@ -626,6 +650,7 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
         extract_data_by_uri -ResourceName "ID-Pools" -FileName "vmac-ranges.txt" -RestRequest "/rest/id-pools/vmac" -SearchParameter "rangeUris" -UriLength 0
         extract_data_by_uri -ResourceName "ID-Pools" -FileName "vsn-ranges.txt" -RestRequest "/rest/id-pools/vsn" -SearchParameter "rangeUris" -UriLength 0
         extract_data_by_uri -ResourceName "ID-Pools" -FileName "vwwn-ranges.txt" -RestRequest "/rest/id-pools/vwwn" -SearchParameter "rangeUris" -UriLength 0
+        extract_data_by_uri -ResourceName "Service-Automation" -FileName "remote-support-details.txt" -RestRequest "/rest/support/entitlements" -SearchParameter "hwuri" -UriLength 0      # v1.7
 
         Write-Host "Done"
 
