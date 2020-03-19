@@ -9,6 +9,8 @@ syshowall v1.7 PS - Synergy Configuration Collector
 
 ### Usage:
 * Run syshowall.ps1
+	- Save or Copy syshowall.ps1 script to your Windows PC
+	- Right click on script and select Run with PowerShell
 * Enter required parameters:
 	- Appliance IP:    IP-address or hostname of Synergy Appliance
 	- Login:           login user name in format domain\user or user
