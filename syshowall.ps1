@@ -1,6 +1,7 @@
 ﻿<#
 syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
+email: sergii.oleshchenko@hpe.ua
 #>
 $scriptVersion = "1.7 PS"
 
@@ -41,9 +42,9 @@ $Appliance = @(
              ("/controller-state.json",                          'controller-state.txt'),    # added in v1.4
             ("/rest/appliance/configuration/time-locale",       'time-locale.txt'),         # added to collect Time settings on the appliance
             ("/rest/appliance/device-read-community-string",    'device-read-community-string.txt'),
-            ("/rest/appliance/eula/status",                     'eula-status.txt'),             # attention
-            ("/rest/appliance/firmware/notification",           'firmware-notification.txt'),   # attention
-            ("/rest/appliance/firmware/pending",                'firmware-pending.txt'),        # attention
+            ("/rest/appliance/eula/status",                     'eula-status.txt'),             
+            ("/rest/appliance/firmware/notification",           'firmware-notification.txt'),   
+            ("/rest/appliance/firmware/pending",                'firmware-pending.txt'),        
             ("/rest/appliance/firmware/verificationKey",        'firmware-verificationkey.txt'),
             ("/rest/appliance/ha-nodes",                        'ha-nodes.txt'),             # added to collect active/standby composer
             ("/rest/appliance/health-status",                   'health-status.txt'),
@@ -72,7 +73,7 @@ $Appliance = @(
             ("/rest/index/resources?query=`"NOT scopeUris:NULL`"", 'scopes-resources.txt'),
             ("/rest/licenses",                                  'licenses.txt'),
     		("/rest/remote-syslog",                             'remote-syslog.txt'),
-            ("/rest/repositories",                              'repositories.txt'),                     # added in v1.4     need to check
+            ("/rest/repositories",                              'repositories.txt'),                     # added in v1.4     
             ("/rest/restores",                                  'restores.txt'),
     		("/rest/scopes",                                    'scopes.txt'),  
             ("/rest/version",                                   'version.txt')
@@ -375,7 +376,7 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                 $count = 0
-                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 400))
+                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
                  #   $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
@@ -385,6 +386,7 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
                     $resp.count += $resp1.count
                     $resp.nextPageUri = $resp1.nextPageUri
                     $count += 1
+                    if($resp1.count -eq 0) {break}                    
                 }
 
 				$jsonResp = $resp | ConvertTo-Json -Depth 99 
@@ -443,7 +445,8 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                 $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
-                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax))
+                $count = 0
+                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
                     $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
@@ -451,6 +454,8 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
                     $resp.nextPageUri = $resp1.nextPageUri
+                    $count += 1
+                    if($resp1.count -eq 0) {break}  
                 }
 
                 # check if remote support collection
@@ -701,7 +706,9 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
                     {
                         Invoke-Command -ScriptBlock {[System.IO.Compression.ZipFile]::CreateFromDirectory($resultDir, $archivePath)} | Wait-Job
                         Remove-Item -Path $resultDir -Recurse
-                        Write-Host "`nConfiguration saved to file:" $archiveName
+                        Write-Host "`nOutput saved to:" 
+                        Write-Host "Path: " $scriptDir
+                        Write-Host "File: " $archiveName
                     }
                     catch
                     {
@@ -778,5 +785,10 @@ else  # collect config for single system
         Write-Host "`n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`n"        
     }
 }
+
+# Cleanup variables
+$username = ""
+$password.Clear()
+$decryptPassword = ""
 
 Read-Host "Press <Enter> to exit..." 
