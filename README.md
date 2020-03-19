@@ -5,7 +5,7 @@ syshowall v1.7 PS - Synergy Configuration Collector
 ### Features:
 * Collects HPE Synergy Appliance configuration.
 * Identifies latest supported API version for Synergy Appliance and collects data based on it.
-* Collects syshowall output to syconf-<ip_address>-<times_tamp>.zip archive.
+* Collects syshowall output to syconf-<ip_address>-<time_stamp>.zip archive.
 
 ### Usage:
 * Run syshowall.ps1
