@@ -3,7 +3,7 @@ syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 email: sergii.oleshchenko@hpe.ua
 #>
-$scriptVersion = "1.7 PS"
+$scriptVersion = "1.7.1 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -131,7 +131,7 @@ $servers = @(
     		("/rest/connections",                  'connections.txt'),
     		("/rest/server-hardware",              'server-hardware.txt'),
     		("/rest/server-hardware-types",        'server-hardware-types.txt'),
-    		("/rest/server-profiles",              'server-profiles.txt'),
+    		("/rest/server-profiles?count=2048",   'server-profiles.txt'),             # added count to 1.7.1 to work with OV 5.00.02
     		("/rest/server-profile-templates",     'server-profile-templates.txt'),
     		("/rest/server-hardware/*/firmware",   'firmware.txt'),                    # added to collect server FW details
             ("/rest/rack-managers",                'rack-managers.txt')
