@@ -3,7 +3,7 @@ syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 email: sergii.oleshchenko@hpe.ua
 #>
-$scriptVersion = "1.7.1 PS"
+$scriptVersion = "2.0 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -172,9 +172,10 @@ $networking = @(
 $storage = @(
     		("/rest/storage-pools",               'storage-pools.txt'),
             ("/rest/storage-systems",             'storage-systems.txt'),
-    		("/rest/storage-volumes",             'storage-volumes.txt'),
+    		("/rest/storage-volume-attachments",  'storage-volume-attachments.txt'),
+            ("/rest/storage-volume-sets",         'storage-volume-sets.txt'),        # added in v2.0
     		("/rest/storage-volume-templates",    'storage-volume-templates.txt'),
-    		("/rest/storage-volume-attachments",  'storage-volume-attachments.txt')
+            ("/rest/storage-volumes",             'storage-volumes.txt')
 )
 
 #Hypervisor
@@ -247,8 +248,10 @@ $sa = @(
 # id-pools
 $idpools= @(
         ("/rest/id-pools/schema",               'schema.txt'),
-        ("/rest/id-pools/ipv4/subnets",         'subnets.txt'),
         ("/rest/id-pools/ipv4/ranges/schema",   'ipv4-ranges-schema.txt'),
+        ("/rest/id-pools/ipv4/subnets",         'subnets.txt'),        
+        ("/rest/id-pools/ipv6/ranges/schema",   'ipv6-ranges-schema.txt'),   # added v2.0
+        ("/rest/id-pools/ipv6/subnets",         'ipv6-subnets.txt'),         # added v2.0
         ("/rest/id-pools/vmac",                 'vmac.txt'),
         ("/rest/id-pools/vmac/ranges/schema",   'vmac-ranges-schema.txt'),
         ("/rest/id-pools/vsn",                  'vsn.txt'),
@@ -271,6 +274,8 @@ function GetXAPIversion([String]$applianceIP)
   {
     #disable SSL checks using new class
     [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12       # added in v2.0
+
     $result = Invoke-RestMethod -Uri $url -Method GET -Headers $xapiheader
     $xapi = $result.currentVersion
   }
@@ -467,7 +472,7 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
 
                 $uriList = @()
 
-                if($resp.members -ne $null)
+                if($resp.ContainsKey('members'))
                 {
                     # extract uris for key in each member
                    foreach ($item in $resp.members)
@@ -518,7 +523,176 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                     $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
                     $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
-                   if ($resp.members -ne $null)
+                   if($resp.ContainsKey('members'))
+                   {
+                      $data.members += $resp.members
+                      $data.count += $resp.count
+                   }
+                   else
+                   {
+                      $data.members += $resp
+                      $data.count += 1
+                   }                                       
+                }
+
+				$jsonResp = $data | ConvertTo-Json -Depth 99 
+                
+			}
+			catch
+			{
+                $jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
+			}
+            finally
+            {
+                #enable ssl checks again
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+            }
+
+
+			if(!(Test-Path $resultDir/$ResourceName))
+			{
+				New-Item $resultDir/$ResourceName -ItemType Directory | Out-Null
+			}
+
+            $jsonResp | Out-File $filepath 
+
+}
+
+
+function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]$UriLength)
+{
+  
+            $url = "https://" + $applianceIP + $RestUri
+            $uriList = @()
+
+            #get count value
+            $countMax = 100000
+            if ($RestUri.Contains("?"))
+            {
+                $params = $RestUri.split("?")[1]
+                $params_list = $params.split("&")
+                foreach ($param in $params_list)
+                {
+                    if($param.Contains("count"))
+                    {
+                        $countMax = [int]$param.split("=")[1]
+                    }
+                }
+            }
+
+			try
+			{
+                #disable SSL checks using new class
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+
+                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
+                $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
+
+                $count = 0
+                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
+                {
+                    $url = "https://" + $applianceIP + $resp.nextPageUri
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
+                    $resp.members += $resp1.members
+                    $resp.count += $resp1.count
+                    $resp.nextPageUri = $resp1.nextPageUri
+                    $count += 1
+                    if($resp1.count -eq 0) {break}  
+                }
+
+                # check if remote support collection
+                $isRScollection = $false
+                if ($SearchField.Contains("hwuri"))
+                {
+                   $isRScollection = $true         
+                }
+                
+                if($resp.ContainsKey('members'))
+                {
+                    # extract uris for key in each member
+                   foreach ($item in $resp.members)
+                   {
+                        $uri_data = $item.$SearchField
+                        $uriList += $uri_data
+
+                        # for RS leave only devices with entitlement
+                        if ($isRScollection -and ($item.entitlementStatus -eq $null))
+                        {
+                           $uriList = $uriList -ne $uri_data
+                        }
+                   }
+                }
+                else
+                {
+                    $uri_data = $resp.$SearchField
+                    $uriList += $uri_data
+                }
+
+                # for RS insert 'support' to uri
+                if ($isRScollection)
+                {
+                   $uriList = $uriList.ForEach({$_.insert(6,'support/')}) 
+                }
+
+                # get required uri length, 0 means complete uri
+                if ($UriLength -gt 0)
+                {
+                     for($i=0; $i -lt $uriList.length; $i++)
+                     {   
+                         $splitList = $uriList[$i].split("/")[0..$UriLength]                                                     
+                         $uriList[$i] = $splitList -join "/"
+                     }
+                }
+                # leave only unique uries
+                $uriList = $uriList | Get-Unique
+                                          
+			}
+			catch
+			{
+                $jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
+			}
+            finally
+            {
+                #enable ssl checks again
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+            }
+
+    return $uriList
+}
+
+function extract_data_by_uri_list([String]$ResourceName, [String]$FileName, [Array]$UriList, [String]$AppendUri)
+{
+  
+			$OutFileName = $ResourceName + '_' + $FileName
+            $filepath = Join-Path $resultdir $ResourceName | Join-Path -ChildPath $OutFileName
+
+            #get count value
+            $countMax = 100000
+
+              $data = [Ordered]@{
+                   "count"       = 0
+                   "members"     = @()
+                   "eTag"        = '' }
+            
+           try
+           { 
+
+                #disable SSL checks using new class
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+
+                if($AppendUri)
+                {
+                    $UriList = $UriList.ForEach({$_ + "/" + $AppendUri})
+                }
+                 
+                foreach($uri in $UriList)
+                {
+                    $url = "https://" + $applianceIP + $uri
+                    $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
+
+                   if($resp.ContainsKey('members'))
                    {
                       $data.members += $resp.members
                       $data.count += $resp.count
@@ -550,6 +724,52 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
 			}
 
             $jsonResp | Out-File $filepath
+
+}
+
+
+function extract_few_more_details()
+{
+
+    extract_data_by_uri -ResourceName "SAS-Storage" -FileName "sas-logical-drive-enclosures.txt" -RestRequest "/rest/sas-logical-jbods" -SearchParameter "logicalDriveBayUris" -UriLength 4
+    extract_data_by_uri -ResourceName "ID-Pools" -FileName "ipv4-ranges.txt" -RestRequest "/rest/id-pools/ipv4/subnets" -SearchParameter "rangeUris" -UriLength 0
+    extract_data_by_uri -ResourceName "ID-Pools" -FileName "ipv6-ranges.txt" -RestRequest "/rest/id-pools/ipv6/subnets" -SearchParameter "rangeUris" -UriLength 0       # added in v2.0
+    extract_data_by_uri -ResourceName "ID-Pools" -FileName "vmac-ranges.txt" -RestRequest "/rest/id-pools/vmac" -SearchParameter "rangeUris" -UriLength 0
+    extract_data_by_uri -ResourceName "ID-Pools" -FileName "vsn-ranges.txt" -RestRequest "/rest/id-pools/vsn" -SearchParameter "rangeUris" -UriLength 0
+    extract_data_by_uri -ResourceName "ID-Pools" -FileName "vwwn-ranges.txt" -RestRequest "/rest/id-pools/vwwn" -SearchParameter "rangeUris" -UriLength 0
+    extract_data_by_uri -ResourceName "Service-Automation" -FileName "remote-support-details.txt" -RestRequest "/rest/support/entitlements" -SearchParameter "hwuri" -UriLength 0      # v1.7
+
+    # Extract additional Server Details
+    $uri_list = extract_resource_uri_list -RestUri "/rest/server-hardware" -SearchField "uri" -UriLength 0
+    
+    $resource_set = @(
+        ('memory',                    'server-hardware-memory.txt'),
+        ('memoryList',                'server-hardware-memory-list.txt'),
+        ('localStorage',              'server-hardware-local-storage.txt'),
+        ('devices',                   'server-hardware-devices.txt'),
+        ('bios',                      'server-hardware-bios.txt'),
+        ('environmentalConfiguration','server-hardware-environmental-config.txt'),
+        ('advancedMemoryProtection',  'server-hardware-advanced-memory-prot.txt')
+        # ('utilization',               'server-hardware-utilization.txt')
+        )
+
+    foreach($resource in $resource_set)
+    {
+        extract_data_by_uri_list -ResourceName "Servers" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
+    }
+
+    # Extract additional SAS Details
+    $uri_list = extract_resource_uri_list -RestUri "/rest/sas-logical-jbods" -SearchField "uri" -UriLength 0
+    
+    $resource = @('drives',  'sas-logical-jbods-drives.txt')
+    extract_data_by_uri_list -ResourceName "SAS-Storage" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
+
+
+    # Extract additional Storage Details
+    $uri_list = extract_resource_uri_list -RestUri "/rest/storage-volumes" -SearchField "uri" -UriLength 0
+    
+    $resource = @('snapshots',  'storage-volumes-snapshots.txt')
+    extract_data_by_uri_list -ResourceName "Storage" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
 
 }
 
@@ -646,16 +866,10 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 		#id-pools
 		extract_data -ResourceName "ID-Pools" -Resources $idpools
 
-
         #Extract Additional Information
         Write-Host "Extracting few more details....... " -NoNewline
-
-        extract_data_by_uri -ResourceName "SAS-Storage" -FileName "sas-logical-drive-enclosures.txt" -RestRequest "/rest/sas-logical-jbods" -SearchParameter "logicalDriveBayUris" -UriLength 4
-        extract_data_by_uri -ResourceName "ID-Pools" -FileName "ipv4-ranges.txt" -RestRequest "/rest/id-pools/ipv4/subnets" -SearchParameter "rangeUris" -UriLength 0
-        extract_data_by_uri -ResourceName "ID-Pools" -FileName "vmac-ranges.txt" -RestRequest "/rest/id-pools/vmac" -SearchParameter "rangeUris" -UriLength 0
-        extract_data_by_uri -ResourceName "ID-Pools" -FileName "vsn-ranges.txt" -RestRequest "/rest/id-pools/vsn" -SearchParameter "rangeUris" -UriLength 0
-        extract_data_by_uri -ResourceName "ID-Pools" -FileName "vwwn-ranges.txt" -RestRequest "/rest/id-pools/vwwn" -SearchParameter "rangeUris" -UriLength 0
-        extract_data_by_uri -ResourceName "Service-Automation" -FileName "remote-support-details.txt" -RestRequest "/rest/support/entitlements" -SearchParameter "hwuri" -UriLength 0      # v1.7
+        
+        extract_few_more_details
 
         Write-Host "Done"
 
