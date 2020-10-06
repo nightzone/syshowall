@@ -3,7 +3,7 @@ syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 email: sergii.oleshchenko@hpe.ua
 #>
-$scriptVersion = "2.0 PS"
+$scriptVersion = "2.1 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -26,7 +26,7 @@ if (-not ([System.Management.Automation.PSTypeName]'SSLHandler').Type)
     Add-Type -TypeDefinition $code
 }
 
-# to support zipping 
+# to support zipping
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 Write-Host ("syshowall v" + $scriptVersion + " - Synergy Configuration Collector`n")
@@ -42,9 +42,9 @@ $Appliance = @(
              ("/controller-state.json",                          'controller-state.txt'),    # added in v1.4
             ("/rest/appliance/configuration/time-locale",       'time-locale.txt'),         # added to collect Time settings on the appliance
             ("/rest/appliance/device-read-community-string",    'device-read-community-string.txt'),
-            ("/rest/appliance/eula/status",                     'eula-status.txt'),             
-            ("/rest/appliance/firmware/notification",           'firmware-notification.txt'),   
-            ("/rest/appliance/firmware/pending",                'firmware-pending.txt'),        
+            ("/rest/appliance/eula/status",                     'eula-status.txt'),
+            ("/rest/appliance/firmware/notification",           'firmware-notification.txt'),
+            ("/rest/appliance/firmware/pending",                'firmware-pending.txt'),
             ("/rest/appliance/firmware/verificationKey",        'firmware-verificationkey.txt'),
             ("/rest/appliance/ha-nodes",                        'ha-nodes.txt'),             # added to collect active/standby composer
             ("/rest/appliance/health-status",                   'health-status.txt'),
@@ -53,7 +53,7 @@ $Appliance = @(
             ("/rest/appliance/nodeinfo/status",                'nodeinfo-status.txt'),
             ("/rest/appliance/nodeinfo/version",               'nodeinfo-version.txt'),
             ("/rest/appliance/notifications/email-config",      'notification-email-config.txt'),
-    	    ("/rest/appliance/notifications/test-email-config",     'notification-test-email-config.txt'),            
+    	    ("/rest/appliance/notifications/test-email-config",     'notification-test-email-config.txt'),
             ("/rest/appliance/progress",                        'progress.txt'),
             ("/rest/appliance/proxy-config",                    'proxy-config.txt'),                # added in v1.4
             ("/rest/appliance/settings/serviceaccess",          'settings-serviceaccess.txt'),   # attention
@@ -66,16 +66,16 @@ $Appliance = @(
             ("/rest/deployment-servers/image-streamer-appliances",  'image-streamer-appliances.txt'),    # added to collect IS appliance details
             ("/rest/domains",                                   'domains.txt'),
             ("/rest/domains/schema",                            'domains-schema.txt'),
-            ("/rest/firmware-drivers",                          'firmware-drivers.txt'), 
+            ("/rest/firmware-drivers",                          'firmware-drivers.txt'),
             ("/rest/global-settings",                           'global-settings.txt'),
-            ("/rest/hardware-compliance",                       'hardware-compliance.txt'), 
-            ("/rest/hw-appliances",                             'hw-appliances.txt'),  
+            ("/rest/hardware-compliance",                       'hardware-compliance.txt'),
+            ("/rest/hw-appliances",                             'hw-appliances.txt'),
             ("/rest/index/resources?query=`"NOT scopeUris:NULL`"", 'scopes-resources.txt'),
             ("/rest/licenses",                                  'licenses.txt'),
     		("/rest/remote-syslog",                             'remote-syslog.txt'),
-            ("/rest/repositories",                              'repositories.txt'),                     # added in v1.4     
+            ("/rest/repositories",                              'repositories.txt'),                     # added in v1.4
             ("/rest/restores",                                  'restores.txt'),
-    		("/rest/scopes",                                    'scopes.txt'),  
+    		("/rest/scopes",                                    'scopes.txt'),
             ("/rest/version",                                   'version.txt')
 )
 
@@ -123,7 +123,7 @@ $activity =
             (("/rest/audit-logs/settings"),                                                  'audit-logs-settings.txt'),
     		("/rest/alerts?start=0&count=300&sort=created:descending",                       'alerts.txt'),
     		("/rest/events?start=0&count=300&sort=created:descending",                       'events.txt'),
-            ("/rest/tasks?sort=created:descending&filter=`"created ge {2 days ago}`"",       'tasks.txt')
+            (("/rest/tasks?sort=created:descending&filter=`"created ge " + $historyDate + "T00:00:01.830Z`""),  'tasks.txt')
 )
 
 #Servers
@@ -249,7 +249,7 @@ $sa = @(
 $idpools= @(
         ("/rest/id-pools/schema",               'schema.txt'),
         ("/rest/id-pools/ipv4/ranges/schema",   'ipv4-ranges-schema.txt'),
-        ("/rest/id-pools/ipv4/subnets",         'subnets.txt'),        
+        ("/rest/id-pools/ipv4/subnets",         'subnets.txt'),
         ("/rest/id-pools/ipv6/ranges/schema",   'ipv6-ranges-schema.txt'),   # added v2.0
         ("/rest/id-pools/ipv6/subnets",         'ipv6-subnets.txt'),         # added v2.0
         ("/rest/id-pools/vmac",                 'vmac.txt'),
@@ -385,17 +385,17 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
                  #   $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
-                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
                     $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
                     $resp.nextPageUri = $resp1.nextPageUri
                     $count += 1
-                    if($resp1.count -eq 0) {break}                    
+                    if($resp1.count -eq 0) {break}
                 }
 
-				$jsonResp = $resp | ConvertTo-Json -Depth 99 
-                
+				$jsonResp = $resp | ConvertTo-Json -Depth 99
+
 			}
 			catch
 			{
@@ -422,7 +422,7 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
 
 function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$RestRequest, [String]$SearchParameter, [Int]$UriLength)
 {
-  
+
 			$OutFileName = $ResourceName + '_' + $FileName
             $filepath = Join-Path $resultdir $ResourceName | Join-Path -ChildPath $OutFileName
             $url = "https://" + $applianceIP + $RestRequest
@@ -454,20 +454,20 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                 while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
-                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
                     $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
                     $resp.nextPageUri = $resp1.nextPageUri
                     $count += 1
-                    if($resp1.count -eq 0) {break}  
+                    if($resp1.count -eq 0) {break}
                 }
 
                 # check if remote support collection
                 $isRScollection = $false
                 if ($SearchParameter.Contains("hwuri"))
                 {
-                   $isRScollection = $true         
+                   $isRScollection = $true
                 }
 
                 $uriList = @()
@@ -496,21 +496,21 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                 # for RS insert 'support' to uri
                 if ($isRScollection)
                 {
-                   $uriList = $uriList.ForEach({$_.insert(6,'support/')}) 
+                   $uriList = $uriList.ForEach({$_.insert(6,'support/')})
                 }
 
                 # get required uri length, 0 means complete uri
                 if ($UriLength -gt 0)
                 {
                      for($i=0; $i -lt $uriList.length; $i++)
-                     {   
-                         $splitList = $uriList[$i].split("/")[0..$UriLength]                                                     
+                     {
+                         $splitList = $uriList[$i].split("/")[0..$UriLength]
                          $uriList[$i] = $splitList -join "/"
                      }
                 }
                 # leave only unique uries
                 $uriList = $uriList | Get-Unique
-                    
+
 
               $data = [Ordered]@{
                    "count"       = 0
@@ -520,7 +520,7 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                 foreach($uri in $uriList)
                 {
                     $url = "https://" + $applianceIP + $uri
-                    $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
                     $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                    if($resp.ContainsKey('members'))
@@ -532,11 +532,11 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                    {
                       $data.members += $resp
                       $data.count += 1
-                   }                                       
+                   }
                 }
 
-				$jsonResp = $data | ConvertTo-Json -Depth 99 
-                
+				$jsonResp = $data | ConvertTo-Json -Depth 99
+
 			}
 			catch
 			{
@@ -554,14 +554,14 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
 				New-Item $resultDir/$ResourceName -ItemType Directory | Out-Null
 			}
 
-            $jsonResp | Out-File $filepath 
+            $jsonResp | Out-File $filepath
 
 }
 
 
 function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]$UriLength)
 {
-  
+
             $url = "https://" + $applianceIP + $RestUri
             $uriList = @()
 
@@ -592,22 +592,22 @@ function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]
                 while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
-                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
                     $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
                     $resp.nextPageUri = $resp1.nextPageUri
                     $count += 1
-                    if($resp1.count -eq 0) {break}  
+                    if($resp1.count -eq 0) {break}
                 }
 
                 # check if remote support collection
                 $isRScollection = $false
                 if ($SearchField.Contains("hwuri"))
                 {
-                   $isRScollection = $true         
+                   $isRScollection = $true
                 }
-                
+
                 if($resp.ContainsKey('members'))
                 {
                     # extract uris for key in each member
@@ -632,21 +632,21 @@ function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]
                 # for RS insert 'support' to uri
                 if ($isRScollection)
                 {
-                   $uriList = $uriList.ForEach({$_.insert(6,'support/')}) 
+                   $uriList = $uriList.ForEach({$_.insert(6,'support/')})
                 }
 
                 # get required uri length, 0 means complete uri
                 if ($UriLength -gt 0)
                 {
                      for($i=0; $i -lt $uriList.length; $i++)
-                     {   
-                         $splitList = $uriList[$i].split("/")[0..$UriLength]                                                     
+                     {
+                         $splitList = $uriList[$i].split("/")[0..$UriLength]
                          $uriList[$i] = $splitList -join "/"
                      }
                 }
                 # leave only unique uries
                 $uriList = $uriList | Get-Unique
-                                          
+
 			}
 			catch
 			{
@@ -663,7 +663,7 @@ function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]
 
 function extract_data_by_uri_list([String]$ResourceName, [String]$FileName, [Array]$UriList, [String]$AppendUri)
 {
-  
+
 			$OutFileName = $ResourceName + '_' + $FileName
             $filepath = Join-Path $resultdir $ResourceName | Join-Path -ChildPath $OutFileName
 
@@ -674,42 +674,52 @@ function extract_data_by_uri_list([String]$ResourceName, [String]$FileName, [Arr
                    "count"       = 0
                    "members"     = @()
                    "eTag"        = '' }
-            
+
            try
-           { 
+           {
 
                 #disable SSL checks using new class
                 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
 
-                if($AppendUri)
-                {
-                    $UriList = $UriList.ForEach({$_ + "/" + $AppendUri})
-                }
-                 
                 foreach($uri in $UriList)
                 {
-                    $url = "https://" + $applianceIP + $uri
-                    $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content   
-                    $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
+                  try
+                  {
+                      $url = "https://" + $applianceIP + $uri
 
-                   if($resp.ContainsKey('members'))
-                   {
-                      $data.members += $resp.members
-                      $data.count += $resp.count
-                   }
-                   else
-                   {
-                      $data.members += $resp
-                      $data.count += 1
-                   }                                       
+                      if($AppendUri)
+                      {
+                          $url = $url + "/" + $AppendUri
+                      }
+
+                      $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
+                      $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
+
+                     if($resp.ContainsKey('members'))
+                     {
+                        $resp.members = $resp.members.foreach({$_.Add("parentUri",$uri)})
+                        $data.members += $resp.members
+                        $data.count += $resp.count
+                     }
+                     else
+                     {
+                        $resp.Add("parentUri", $uri)                       
+                        $data.members += $resp
+                        $data.count += 1
+                     }
+                  }
+                  catch
+                  {
+                    Continue
+                  }
                 }
 
-				$jsonResp = $data | ConvertTo-Json -Depth 99 
-                
+				$jsonResp = $data | ConvertTo-Json -Depth 99
+
 			}
 			catch
 			{
-                $jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
+                #$jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
 			}
             finally
             {
@@ -741,11 +751,12 @@ function extract_few_more_details()
 
     # Extract additional Server Details
     $uri_list = extract_resource_uri_list -RestUri "/rest/server-hardware" -SearchField "uri" -UriLength 0
-    
+
     $resource_set = @(
         ('memory',                    'server-hardware-memory.txt'),
         ('memoryList',                'server-hardware-memory-list.txt'),
         ('localStorage',              'server-hardware-local-storage.txt'),
+        ('localStorageV2',            'server-hardware-local-storageV2.txt'),   # v2.1
         ('devices',                   'server-hardware-devices.txt'),
         ('bios',                      'server-hardware-bios.txt'),
         ('environmentalConfiguration','server-hardware-environmental-config.txt'),
@@ -760,14 +771,14 @@ function extract_few_more_details()
 
     # Extract additional SAS Details
     $uri_list = extract_resource_uri_list -RestUri "/rest/sas-logical-jbods" -SearchField "uri" -UriLength 0
-    
+
     $resource = @('drives',  'sas-logical-jbods-drives.txt')
     extract_data_by_uri_list -ResourceName "SAS-Storage" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
 
 
     # Extract additional Storage Details
     $uri_list = extract_resource_uri_list -RestUri "/rest/storage-volumes" -SearchField "uri" -UriLength 0
-    
+
     $resource = @('snapshots',  'storage-volumes-snapshots.txt')
     extract_data_by_uri_list -ResourceName "Storage" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
 
@@ -796,7 +807,7 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 	{
 
         # Save Progress Preference and set it to silent
-        $oldProgressPreference = $progressPreference 
+        $oldProgressPreference = $progressPreference
         $progressPreference = 'SilentlyContinue'
 
 		# Create Temporary Output Directory
@@ -868,7 +879,7 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 
         #Extract Additional Information
         Write-Host "Extracting few more details....... " -NoNewline
-        
+
         extract_few_more_details
 
         Write-Host "Done"
@@ -909,18 +920,18 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 		Start-Sleep -Seconds 5
 
 		if(Test-Path $resultDir){
-					$currentTime = Get-Date -Format "yyyyMMddHHmmss".toString()
+					$currentTime = Get-Date -Format "yyyyMMdd.HHmmss".toString()
 					$archiveName = "syconf-" + $applianceIP + "-" + $currentTime + ".zip"
 					$archivePath = Join-Path $scriptDir $archiveName
-                   
+
                     if(Test-Path $archivePath){
-	                     Remove-Item -Path $archivePath 
+	                     Remove-Item -Path $archivePath
                     }
                     try
                     {
                         Invoke-Command -ScriptBlock {[System.IO.Compression.ZipFile]::CreateFromDirectory($resultDir, $archivePath)} | Wait-Job
                         Remove-Item -Path $resultDir -Recurse
-                        Write-Host "`nOutput saved to:" 
+                        Write-Host "`nOutput saved to:"
                         Write-Host "Path: " $scriptDir
                         Write-Host "File: " $archiveName
                     }
@@ -954,7 +965,7 @@ $header = @{}
 $scriptDir = $PSScriptRoot
 $iplistPath = Join-Path $scriptDir "iplist.txt"
 # if iplist.txt exist - collect configs from systems in file
-if(Test-Path $iplistPath) 
+if(Test-Path $iplistPath)
 {
     Write-Host "List of IP 'iplist.txt' found:"
 
@@ -973,7 +984,7 @@ if(Test-Path $iplistPath)
         if($ip.length -gt 2)
         {
             $header = @{}
-        
+
             extract_all -applianceIP $ip -Login $username -Password $decryptPassword
 
             Write-Host "`n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
@@ -995,8 +1006,8 @@ else  # collect config for single system
 
         # Collect Configuration
         extract_all -applianceIP $applianceIP -Login $username -Password $decryptPassword
-    
-        Write-Host "`n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`n"        
+
+        Write-Host "`n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`n"
     }
 }
 
@@ -1005,4 +1016,4 @@ $username = ""
 $password.Clear()
 $decryptPassword = ""
 
-Read-Host "Press <Enter> to exit..." 
+Read-Host "Press <Enter> to exit..."
