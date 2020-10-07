@@ -219,13 +219,13 @@ $uncategorized = @(
 
 # SAS Storage
 $sas= @(
-      ("/rest/drive-enclosures",                  'drive-enclosures.txt'),
-      ("/rest/sas-interconnect-types",            'sas-interconnect-types.txt'),
-    	("/rest/sas-interconnects",                 'sas-interconnects.txt'),
-    	("/rest/sas-logical-interconnect-groups",   'sas-logical-interconnect-groups.txt'),
-    	("/rest/sas-logical-interconnects",         'sas-logical-interconnects.txt'),
-    	("/rest/sas-logical-jbod-attachments",      'sas-logical-jbod-attachments.txt'),
-    	("/rest/sas-logical-jbods",                 'sas-logical-jbods.txt')
+            ("/rest/drive-enclosures",                  'drive-enclosures.txt'),
+            ("/rest/sas-interconnect-types",            'sas-interconnect-types.txt'),
+            ("/rest/sas-interconnects",                 'sas-interconnects.txt'),
+            ("/rest/sas-logical-interconnect-groups",   'sas-logical-interconnect-groups.txt'),
+            ("/rest/sas-logical-interconnects",         'sas-logical-interconnects.txt'),
+            ("/rest/sas-logical-jbod-attachments",      'sas-logical-jbod-attachments.txt'),
+            ("/rest/sas-logical-jbods",                 'sas-logical-jbods.txt')
 )
 
 # Service Automation
