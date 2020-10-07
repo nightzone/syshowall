@@ -381,7 +381,7 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                 $count = 0
-                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
+                while(($null -ne $resp.nextPageUri) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
                  #   $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
@@ -451,7 +451,7 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                 $count = 0
-                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
+                while(($null -ne $resp.nextPageUri) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
                     $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
@@ -481,7 +481,7 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                         $uriList += $uri_data
 
                         # for RS leave only devices with entitlement
-                        if ($isRScollection -and ($item.entitlementStatus -eq $null))
+                        if ($isRScollection -and ($null -eq $item.entitlementStatus))
                         {
                            $uriList = $uriList -ne $uri_data
                         }
@@ -589,7 +589,7 @@ function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                 $count = 0
-                while(($resp.nextPageUri -ne $null) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
+                while(($null -ne $resp.nextPageUri) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
                     $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
@@ -617,7 +617,7 @@ function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]
                         $uriList += $uri_data
 
                         # for RS leave only devices with entitlement
-                        if ($isRScollection -and ($item.entitlementStatus -eq $null))
+                        if ($isRScollection -and ($null -eq $item.entitlementStatus))
                         {
                            $uriList = $uriList -ne $uri_data
                         }
@@ -650,7 +650,7 @@ function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]
 			}
 			catch
 			{
-                $jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
+                #$jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
 			}
             finally
             {
@@ -668,7 +668,7 @@ function extract_data_by_uri_list([String]$ResourceName, [String]$FileName, [Arr
             $filepath = Join-Path $resultdir $ResourceName | Join-Path -ChildPath $OutFileName
 
             #get count value
-            $countMax = 100000
+           # $countMax = 100000
 
               $data = [Ordered]@{
                    "count"       = 0
@@ -719,6 +719,9 @@ function extract_data_by_uri_list([String]$ResourceName, [String]$FileName, [Arr
 			}
 			catch
 			{
+                Write-Host "StatusCode: " + $_.Exception.Response.StatusCode.value__
+                Write-Host "StatusDescription: " + $_.Exception.Response.StatusDescription
+
                 #$jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
 			}
             finally
