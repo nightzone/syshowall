@@ -60,6 +60,7 @@ $Appliance = @(
             ("/rest/appliance/snmpv3-trap-forwarding/destinations", 'snmpv3-destinations.txt'),      # added in v1.4
             ("/rest/appliance/snmpv3-trap-forwarding/users",        'snmpv3-users.txt'),          # added in v1.4
             ("/rest/appliance/ssh-access",                      'ssh-access.txt'),
+            ("/rest/appliance/static-routes",                    'static-routes.txt'),          # v2.1
             ("/rest/appliance/trap-destinations",               'trap-destinations.txt'),
             ("/rest/backups",                                   'backups.txt'),
     		("/rest/backups/config",                            'backups-config.txt'),
@@ -121,7 +122,8 @@ $activity =
 @(
             (("/rest/audit-logs?filter=`"DATE >= '" + $historyDate + "'`""),                 'audit-logs.txt'),
             (("/rest/audit-logs/settings"),                                                  'audit-logs-settings.txt'),
-    		("/rest/alerts?start=0&count=300&sort=created:descending",                       'alerts.txt'),
+            ("/rest/alerts?start=0&count=300&sort=created:descending",                       'alerts.txt'),
+            ("/rest/alerts?sort=created:descending&filter=`"serviceEventSource='true'`"",    'alerts-service-events.txt'), # v2.1
     		("/rest/events?start=0&count=300&sort=created:descending",                       'events.txt'),
             (("/rest/tasks?sort=created:descending&filter=`"created ge " + $historyDate + "T00:00:01.830Z`""),  'tasks.txt')
 )
@@ -156,8 +158,8 @@ $networking = @(
             ("/rest/interconnect-link-topologies",    'interconnect-link-topologies.txt'),
             ("/rest/interconnect-types",              'interconnect-types.txt'),
     		("/rest/interconnects",                   'interconnects.txt'),
-            ("/rest/internal-link-sets",              'internal-link-sets.txt'),
-    		("/rest/logical-downlinks",               'logical-downlinks.txt'),
+            ("/rest/internal-link-sets",              'internal-link-sets.txt'),    # v2.1
+    		("/rest/logical-downlinks",               'logical-downlinks.txt'),     # v2.1
     		("/rest/logical-interconnect-groups",     'logical-interconnect-groups.txt'),
     		("/rest/logical-interconnects",           'logical-interconnects.txt'),
             ("/rest/logical-switch-groups",           'logical-switch-groups.txt'),       # added in v1.4
