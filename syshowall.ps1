@@ -3,7 +3,7 @@ syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 email: sergii.oleshchenko@hpe.ua
 #>
-$scriptVersion = "2.1 PS"
+$scriptVersion = "2.1.1 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -34,6 +34,7 @@ Write-Host ("syshowall v" + $scriptVersion + " - Synergy Configuration Collector
 
 # Timeframe for Audit Log
 $historyDate = (Get-Date).AddDays(-5).ToString("yyyy-MM-dd")
+$historyDateTasks = (Get-Date).AddDays(-2).ToString("yyyy-MM-dd")
 
 # REST URIs and file names where to save output
 
@@ -125,7 +126,7 @@ $activity =
             ("/rest/alerts?start=0&count=300&sort=created:descending",                       'alerts.txt'),
             ("/rest/alerts?sort=created:descending&filter=`"serviceEventSource='true'`"",    'alerts-service-events.txt'), # v2.1
     		("/rest/events?start=0&count=300&sort=created:descending",                       'events.txt'),
-            (("/rest/tasks?sort=created:descending&filter=`"created ge " + $historyDate + "T00:00:01.830Z`""),  'tasks.txt')
+            (("/rest/tasks?sort=created:descending&filter=`"created ge " + $historyDateTasks + "T00:00:01.830Z`""),  'tasks.txt')
 )
 
 #Servers
