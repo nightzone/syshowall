@@ -319,7 +319,7 @@ function create_session([String]$applianceIP, [String]$Login, [String]$Password,
   }
 
   $body = [Ordered]@{
-       "authLoginDomain" = $domain.ToUpper()
+       "authLoginDomain" = $domain
        "password"        = $Password
        "userName"        = $username
        "loginMsgAck"     = 'true'}
