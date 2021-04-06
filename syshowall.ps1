@@ -3,7 +3,7 @@ syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 email: sergii.oleshchenko@hpe.ua
 #>
-$scriptVersion = "2.1.1 PS"
+$scriptVersion = "3.0 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -32,11 +32,13 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 Write-Host ("syshowall v" + $scriptVersion + " - Synergy Configuration Collector`n")
 
 
+function Get_OV_resources()
+{
+# REST URIs and file names where to save output
+
 # Timeframe for Audit Log
 $historyDate = (Get-Date).AddDays(-5).ToString("yyyy-MM-dd")
 $historyDateTasks = (Get-Date).AddDays(-2).ToString("yyyy-MM-dd")
-
-# REST URIs and file names where to save output
 
 # Appliance URI
 $Appliance = @(
@@ -262,6 +264,101 @@ $idpools= @(
         ("/rest/id-pools/vwwn",                 'vwwn.txt'),
         ("/rest/id-pools/vwwn/ranges/schema",   'vwwn-ranges-schema.txt')
 )
+
+$resourceArray = @(
+    @("Appliance",          $Appliance),
+    @("HP-OneView-Version", $hponeviewversion),
+    @("FC-SAN",             $fcsans),
+    @("Security",           $security),
+    @("Activity",           $activity),
+    @("Servers",            $servers),
+    @("Enclosures",         $enclosures),
+    @("Networking",         $networking),
+    @("Storage",            $storage),
+    @("Deployment",         $deployment),
+    @("Facilities",         $facilities),
+    @("Uncategorized",      $uncategorized),
+    #@("Index",              $index),
+    @("SAS-Storage",        $sas),
+    @("Service-Automation", $sa),
+    @("Facilities",         $facilities),
+    @("ID-Pools",           $idpools)
+)
+
+return $resourceArray
+
+}
+
+function Get_GD_resources()
+{
+# REST URIs and file names where to save output
+
+# Appliance URI
+$appliance = @(
+            ("/rest/appliance/configuration/time-locale",       'time-locale.txt'),        
+            ("/rest/appliance/ha-nodes",                        'ha-nodes.txt'),   
+            ("/rest/appliance/health-status",                   'health-status.txt'),
+            ("/rest/appliance/network-interfaces",              'network-interfaces.txt'),
+            ("/rest/appliance/nodeinfo/status",                 'nodeinfo-status.txt'),
+            ("/rest/appliance/nodeinfo/version",                'nodeinfo-version.txt'),
+            ("/rest/appliance/notifications/email-config",      'notification-email-config.txt'),
+            ("/rest/appliance/settings/serviceaccess",          'settings-serviceaccess.txt'),               
+            ("/rest/backups",                                   'backups.txt'),
+    		("/rest/backups/config",                            'backups-config.txt'),
+            ("/rest/global-settings",                           'global-settings.txt'),
+            ("/rest/version",                                   'version.txt')
+)
+
+# resources
+$resources = @(
+            ("/rest/appliances",                 'appliances.txt'),   
+            ("/rest/converged-systems",          'converged-systems.txt'),
+            ("/rest/enclosures",                 'enclosures.txt'),
+            ("/rest/groups",                     'groups.txt'),
+            ("/rest/interconnects",              'interconnects.txt'),
+            ("/rest/managed-sans",               'managed-sans.txt'),            
+            ("/rest/resource-alerts",            'resource-alerts.txt'),
+            ("/rest/san-managers",               'san-managers.txt'),
+            ("/rest/server-firmware",            'server-firmware.txt'),
+            ("/rest/server-hardware",            'server-hardware.txt'),
+            ("/rest/server-profiles",            'server-profiles.txt'),
+            ("/rest/server-profile-templates",   'server-profile-templates.txt'),
+            ("/rest/storage-pools",              'storage-pools.txt'),
+            ("/rest/storage-systems",            'storage-systems.txt'),
+            ("/rest/storage-volumes",            'storage-volumes.txt'),
+            ("/rest/groups",                     'groups.txt')
+)
+
+# Security
+$security = @(
+            ("/rest/active-user-sessions",                      'active-user-sessions.txt'),
+            ("/rest/certificates",                              'certificates.txt'),
+            ("/rest/certificates/ca",                           'certificates-ca.txt'),
+            ("/rest/certificates/https",                        'certificates-https.txt'),
+            ("/rest/logindetails",                              'logindetails.txt'),
+            ("/rest/logindomains",                              'logindomains.txt'),
+            ("/rest/logindomains/global-settings",              'logindomains-global-settings.txt'),
+            ("/rest/logindomains/grouptorolemapping",           'logindomains-grouptorolemapping.txt'),
+            ("/rest/roles",                                     'roles.txt'),
+            ("/rest/users",                                     'users.txt')
+)
+
+# Create Resource Array    in format  [name, restresource]
+
+$resourceArray = @(
+    @("Appliance",          $appliance),
+    @("Resources",          $resources),
+    @("Security",           $security)
+)
+
+return $resourceArray
+
+}
+
+# Extract Modelof Appliance
+function Get_Appliance_Model()
+{
+}
 
 # Identifies latest supported API version
 function GetXAPIversion([String]$applianceIP)
@@ -831,62 +928,17 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 
 		#Discover resources
 		Write-Host `n">> Extracting Data <<"
-
-		#Appliance
-		extract_data -ResourceName "Appliance" -Resources $Appliance
-
-		#HP OneView Version
-		extract_data -ResourceName "HP-OneView-Version" -Resources $hponeviewversion
-
-		#FC SAN
-		extract_data -ResourceName "FC-SAN" -Resources $fcsans
-
-		#security
-		extract_data -ResourceName "Security" -Resources $security
-
-		#Activity
-		extract_data -ResourceName "Activity" -Resources $activity
-
-		#Servers
-		extract_data -ResourceName "Servers" -Resources $servers
-
-		#Enclosures
-		extract_data -ResourceName "Enclosures" -Resources $enclosures
-
-		#Networking
-		extract_data -ResourceName "Networking" -Resources $networking
-
-		#Storage
-		extract_data -ResourceName "Storage" -Resources $storage
-
-		#Hypervisor
-		extract_data -ResourceName "Hypervisor" -Resources $hypervisor
-
-		#Deployment
-		extract_data -ResourceName "Deployment" -Resources $deployment
-
-		#Facilities
-		extract_data -ResourceName "Facilities" -Resources $facilities
-
-		#Uncategorized
-		extract_data -ResourceName "Uncategorized" -Resources $uncategorized
-
-		#Index
-		#extract_data -ResourceName "Index" -Resources $index
-
-		#SAS
-		extract_data -ResourceName "SAS-Storage" -Resources $sas
-
-		#Service Automation
-		extract_data -ResourceName "Service-Automation" -Resources $sa
-
-		#id-pools
-		extract_data -ResourceName "ID-Pools" -Resources $idpools
+        
+        $resourceArray = Get_GD_resources
+        foreach ($resource in $resourceArray)
+        {
+            extract_data -ResourceName $resource[0] -Resources $resource[1]
+        }
 
         #Extract Additional Information
         Write-Host "Extracting few more details....... " -NoNewline
 
-        extract_few_more_details
+       # extract_few_more_details
 
         Write-Host "Done"
 
