@@ -1,11 +1,15 @@
 syshowall
 =========
-syshowall v2.1 PS - Synergy Configuration Collector
+syshowall v3.0 PS - Synergy Configuration Collector
 
 ### Features:
-* Collects HPE Synergy Appliance configuration.
-* Identifies latest supported API version for Synergy Appliance and collects data based on it.
-* Collects syshowall output to syconf-<ip_address>-<time_stamp>.zip archive.
+* Collects HPE OneView or Global Dashboard Appliance configuration.
+* Identifies latest supported API version for Appliance and collects data based on it.
+* Collects output to syconf/gdconf-<ip_address>-<time_stamp>.zip archive.
+* Supports:
+   	-  HPE OneView Synergy Appliance
+   	-  HPE OneView Appliance
+   	-  HPE OneView Global Dashboard 
 
 ### Usage:
 * Run syshowall.ps1

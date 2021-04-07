@@ -355,9 +355,37 @@ return $resourceArray
 
 }
 
-# Extract Modelof Appliance
+# Get Model of Appliance
 function Get_Appliance_Model()
 {
+    $resturl = "/rest/appliance/nodeinfo/version"
+    $url = "https://" + $applianceIP + $resturl
+
+    $applianceModel = "Unknown"
+
+    try
+	{
+        #disable SSL checks using new class
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
+
+        $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
+        $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
+
+        $applianceModel = $resp.modelNumber
+
+	}
+	catch
+	{
+        $jsonResp = "StatusCode: " + $_.Exception.Response.StatusCode.value__ + "`nStatusDescription: " + $_.Exception.Response.StatusDescription
+	}
+    finally
+    {
+        #enable ssl checks again
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+    }
+
+return $applianceModel
+
 }
 
 # Identifies latest supported API version
@@ -926,21 +954,35 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 			New-Item $resultDir -ItemType Directory | Out-Null
 		}
 
+        # Get and check Appliance model
+        $is_GD = $false
+        $applianceModel = Get_Appliance_Model
+        if($applianceModel.contains("Global Dashboard"))
+        {
+            $is_GD = $true
+            Write-Host `n"Appliance is a Global Dashboard."
+        }
+
 		#Discover resources
 		Write-Host `n">> Extracting Data <<"
         
-        $resourceArray = Get_GD_resources
+        # Get resources depending on Appliance model
+        if ($is_GD) { $resourceArray = Get_GD_resources }
+        else        { $resourceArray = Get_OV_resources }
+        
+        # Extract resources
         foreach ($resource in $resourceArray)
         {
             extract_data -ResourceName $resource[0] -Resources $resource[1]
         }
 
-        #Extract Additional Information
-        Write-Host "Extracting few more details....... " -NoNewline
-
-       # extract_few_more_details
-
-        Write-Host "Done"
+        if ($is_GD -eq $false)
+        {
+            #Extract Additional Information for OV appliance
+            Write-Host "Extracting few more details....... " -NoNewline
+            extract_few_more_details
+            Write-Host "Done"
+        }
 
 		# Disconnect
         $url = "https://" + $applianceIP + "/rest/login-sessions"
@@ -968,6 +1010,7 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 			application = 'syshowall PS'
 			version = $scriptVersion
 			appliance = $applianceIP
+            model = $applianceModel
 			login =  $Login
 			timestamp = Get-Date -Format "yyyy-MM-dd hh:mm:ss".ToString()
 			eTag = $null
@@ -978,8 +1021,10 @@ function extract_all([String]$applianceIP, [String]$Login, [String]$Password)
 		Start-Sleep -Seconds 5
 
 		if(Test-Path $resultDir){
+                    $filePrefix = "syconf"
+                    if($is_GD) {$filePrefix = "gdconf"}  #in case of global dashboard
 					$currentTime = Get-Date -Format "yyyyMMdd.HHmmss".toString()
-					$archiveName = "syconf-" + $applianceIP + "-" + $currentTime + ".zip"
+					$archiveName = $filePrefix + "-" + $applianceIP + "-" + $currentTime + ".zip"
 					$archivePath = Join-Path $scriptDir $archiveName
 
                     if(Test-Path $archivePath){
