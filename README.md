@@ -1,6 +1,6 @@
 syshowall
 =========
-syshowall v3.0 PS - Synergy Configuration Collector
+syshowall v3.1 PS - Synergy Configuration Collector
 
 ### Features:
 * Collects HPE OneView or Global Dashboard Appliance configuration.
@@ -19,7 +19,7 @@ syshowall v3.0 PS - Synergy Configuration Collector
 	- Appliance IP:    IP-address or hostname of Synergy Appliance
 	- Login:           login user name in format domain\user or user
 	- Password:        user password
-* Find collected configuration zip archive "syconf-<ip_address>-<time_stamp>.zip" in script directory.
+* Find collected configuration zip archive "syconf/gdconf-<ip_address>-<time_stamp>.zip" in script directory.
 * Possible to use list of appliances. Just create iplist.txt in script directory and put single Appliance IP per line.
 
 ### Requirements:
@@ -29,4 +29,3 @@ syshowall v3.0 PS - Synergy Configuration Collector
 
 ### Author:
 Sergii Oleshchenko<br/>
-Feedback to: sergii.oleshchenko@hpe.ua<br/>

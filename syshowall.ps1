@@ -1,9 +1,9 @@
 ﻿<#
 syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
-email: sergii.oleshchenko@hpe.ua
+GitHub: https://github.com/nightzone/syshowall
 #>
-$scriptVersion = "3.0 PS"
+$scriptVersion = "3.1 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -80,6 +80,8 @@ $Appliance = @(
             ("/rest/repositories",                              'repositories.txt'),                     # added in v1.4
             ("/rest/restores",                                  'restores.txt'),
     		("/rest/scopes",                                    'scopes.txt'),
+            ("/rest/updates",                                   'updates.txt'),                     # added in v3.1
+            ("/rest/update-settings/schedule",                  'update-settings-schedule.txt'),     # added in v3.1            
             ("/rest/version",                                   'version.txt')
 )
 
@@ -158,6 +160,7 @@ $networking = @(
             ("/rest/fabrics",                         'fabrics.txt'),
     		("/rest/fc-networks",                     'fc-networks.txt'),
             ("/rest/fcoe-networks",                   'fcoe-networks.txt'),       # added in v1.4
+            ("/rest/roce-networks",                   'roce-networks.txt'),       # added in v3.1
             ("/rest/interconnect-link-topologies",    'interconnect-link-topologies.txt'),
             ("/rest/interconnect-types",              'interconnect-types.txt'),
     		("/rest/interconnects",                   'interconnects.txt'),
@@ -276,6 +279,7 @@ $resourceArray = @(
     @("Networking",         $networking),
     @("Storage",            $storage),
     @("Deployment",         $deployment),
+    @("Hypervisor",         $hypervisor),
     @("Facilities",         $facilities),
     @("Uncategorized",      $uncategorized),
     #@("Index",              $index),
@@ -313,21 +317,48 @@ $appliance = @(
 $resources = @(
             ("/rest/appliances",                 'appliances.txt'),   
             ("/rest/converged-systems",          'converged-systems.txt'),
-            ("/rest/enclosures",                 'enclosures.txt'),
-            ("/rest/groups",                     'groups.txt'),
-            ("/rest/interconnects",              'interconnects.txt'),
-            ("/rest/managed-sans",               'managed-sans.txt'),            
             ("/rest/resource-alerts",            'resource-alerts.txt'),
-            ("/rest/san-managers",               'san-managers.txt'),
-            ("/rest/server-firmware",            'server-firmware.txt'),
-            ("/rest/server-hardware",            'server-hardware.txt'),
-            ("/rest/server-profiles",            'server-profiles.txt'),
-            ("/rest/server-profile-templates",   'server-profile-templates.txt'),
-            ("/rest/storage-pools",              'storage-pools.txt'),
-            ("/rest/storage-systems",            'storage-systems.txt'),
-            ("/rest/storage-volumes",            'storage-volumes.txt'),
             ("/rest/groups",                     'groups.txt')
 )
+
+# Servers
+$servers = @(
+            ("/rest/server-firmware",               'server-firmware.txt'),
+            ("/rest/server-hardware",               'server-hardware.txt'),
+            ("/rest/server-profiles",               'server-profiles.txt'),
+            ("/rest/server-profile-templates",      'server-profile-templates.txt')
+)
+
+# Enclosures
+$enclosures = @(
+            ("/rest/enclosures",                 'enclosures.txt'),
+                ("")
+)
+
+# Networking
+$networking = @(
+            ("/rest/interconnects",              'interconnects.txt'),
+                ("")
+)
+
+# Storage
+$storage = @(
+        ("/rest/storage-pools",              'storage-pools.txt'),
+        ("/rest/storage-systems",            'storage-systems.txt'),
+        ("/rest/storage-volumes",            'storage-volumes.txt')
+)
+
+# FC-SAN
+$fcsans = @(
+        ("/rest/managed-sans",               'managed-sans.txt'),            
+        ("/rest/san-managers",               'san-managers.txt')
+)
+
+# SAS storage
+$sasstorage = @(
+        ("/rest/drive-enclosures",           'drive-enclosures.txt'),           
+            ("")
+)    
 
 # Security
 $security = @(
@@ -347,8 +378,14 @@ $security = @(
 
 $resourceArray = @(
     @("Appliance",          $appliance),
+    @("Enclosures",         $enclosures),
+    @("FC-SAN",             $fcsans),
+    @("Networking",         $networking),
     @("Resources",          $resources),
-    @("Security",           $security)
+    @("SAS-Storage",        $sasstorage),
+    @("Security",           $security),
+    @("Servers",            $servers),
+    @("Storage",            $storage)
 )
 
 return $resourceArray
