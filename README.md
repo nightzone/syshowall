@@ -1,6 +1,6 @@
 syshowall
 =========
-syshowall v3.1 PS - Synergy Configuration Collector
+syshowall v3.1.1 PS - Synergy Configuration Collector
 
 ### Features:
 * Collects HPE OneView or Global Dashboard Appliance configuration.
@@ -25,7 +25,11 @@ syshowall v3.1 PS - Synergy Configuration Collector
 ### Requirements:
 * Microsoft .NET 4.5 installed
 * Tested on Windows 10 and PowerShell 5.1
+* Tested on Windows Server 2022 and PowerShell 5.1
 * Tested on Windows Server 2012 R2 and PowerShell 4.0
+
+### Fixes:
+* Fixed issue when "Internet Explorer engine is not available"
 
 ### Author:
 Sergii Oleshchenko<br/>

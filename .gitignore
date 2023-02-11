@@ -1,11 +1,14 @@
 # ignore config files
 syconf*
+gdconf*
 
 # ignore iplist file
 iplist*.txt
 
 # folders
 /result*
+/gdconf*
+/syconf*
 
 # ignore specific files
 *.zip

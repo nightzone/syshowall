@@ -3,7 +3,7 @@ syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 GitHub: https://github.com/nightzone/syshowall
 #>
-$scriptVersion = "3.1 PS"
+$scriptVersion = "3.1.1 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -405,7 +405,7 @@ function Get_Appliance_Model()
         #disable SSL checks using new class
         [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
 
-        $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
+        $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content    #Invoke-RestMethod
         $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
         $applianceModel = $resp.modelNumber
@@ -542,7 +542,7 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
                 #disable SSL checks using new class
                 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
 
-                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
+                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content    #Invoke-RestMethod
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                 $count = 0
@@ -550,7 +550,7 @@ function extract_data([String]$ResourceName, [System.Array]$Resources)
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
                  #   $resp1 = Invoke-RestMethod -Uri $url -Method GET -Headers $header
-                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content
                     $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
@@ -612,14 +612,14 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                 #disable SSL checks using new class
                 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
 
-                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
+                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content    #Invoke-RestMethod
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                 $count = 0
                 while(($null -ne $resp.nextPageUri) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
-                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content
                     $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
@@ -685,7 +685,7 @@ function extract_data_by_uri([String]$ResourceName, [String]$FileName, [String]$
                 foreach($uri in $uriList)
                 {
                     $url = "https://" + $applianceIP + $uri
-                    $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
+                    $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content
                     $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                    if($resp.ContainsKey('members'))
@@ -750,14 +750,14 @@ function extract_resource_uri_list([String]$RestUri, [String]$SearchField, [Int]
                 #disable SSL checks using new class
                 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [SSLHandler]::GetSSLHandler()
 
-                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content    #Invoke-RestMethod
+                $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content    #Invoke-RestMethod
                 $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                 $count = 0
                 while(($null -ne $resp.nextPageUri) -and ($resp.count -lt $countMax) -and ($resp.count -lt $resp.total) -and ($count -le 1000))
                 {
                     $url = "https://" + $applianceIP + $resp.nextPageUri
-                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
+                    $resp1Web = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content
                     $resp1 = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($resp1Web)
                     $resp.members += $resp1.members
                     $resp.count += $resp1.count
@@ -857,7 +857,7 @@ function extract_data_by_uri_list([String]$ResourceName, [String]$FileName, [Arr
                           $url = $url + "/" + $AppendUri
                       }
 
-                      $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header).Content
+                      $respWeb = (Invoke-WebRequest -Uri $url -Method GET -Headers $header -UseBasicParsing).Content
                       $resp = (New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer -Property @{MaxJsonLength=67108864}).DeserializeObject($respWeb)
 
                      if($resp.ContainsKey('members'))
