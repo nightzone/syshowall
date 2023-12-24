@@ -17,11 +17,11 @@ syshowall
 	- Right click on script and select Run with PowerShell
 
 * Enter required parameters:
-	- `Appliance IP:`    IP-address or hostname of Synergy Appliance
-	- `Login:`           login user name in format domain\user or user
-	- `Password:`        user password
+	- Appliance IP:&emsp;IP-address or hostname of Synergy Appliance
+	- Login:&emsp;&emsp;&emsp;&emsp;login user name in format domain\user or user
+	- Password:&emsp;&emsp;user password
 
-* Find collected configuration zip archive `syconf/gdconf-<ip_address>-<time_stamp>.zip` in script directory.
+* Find collected configuration ZIP archive `syconf/gdconf-<ip_address>-<time_stamp>.zip` in script directory.
 
 * Provide ZIP archive to HPE representative for further analysis.
 
