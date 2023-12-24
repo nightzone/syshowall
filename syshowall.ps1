@@ -3,7 +3,7 @@ syshowall - Synergy Configuration Collector
 Written by Sergii Oleshchenko
 GitHub: https://github.com/nightzone/syshowall
 #>
-$scriptVersion = "3.1.1 PS"
+$scriptVersion = "3.2 PS"
 
 # create class to handle SSL errors
 $code = @"
@@ -42,47 +42,48 @@ $historyDateTasks = (Get-Date).AddDays(-2).ToString("yyyy-MM-dd")
 
 # Appliance URI
 $Appliance = @(
-             ("/controller-state.json",                          'controller-state.txt'),    # added in v1.4
-            ("/rest/appliance/configuration/time-locale",       'time-locale.txt'),         # added to collect Time settings on the appliance
-            ("/rest/appliance/device-read-community-string",    'device-read-community-string.txt'),
-            ("/rest/appliance/eula/status",                     'eula-status.txt'),
-            ("/rest/appliance/firmware/notification",           'firmware-notification.txt'),
-            ("/rest/appliance/firmware/pending",                'firmware-pending.txt'),
-            ("/rest/appliance/firmware/verificationKey",        'firmware-verificationkey.txt'),
-            ("/rest/appliance/ha-nodes",                        'ha-nodes.txt'),             # added to collect active/standby composer
-            ("/rest/appliance/health-status",                   'health-status.txt'),
-            ("/rest/appliance/network-interfaces",              'network-interfaces.txt'),
+            ("/controller-state.json",                              'controller-state.txt'),    # added in v1.4
+            ("/rest/appliance/cloud",                               'cloud.txt'),         # added in v3.2
+            ("/rest/appliance/configuration/time-locale",           'time-locale.txt'),         # added to collect Time settings on the appliance
+            ("/rest/appliance/device-read-community-string",        'device-read-community-string.txt'),
+            ("/rest/appliance/eula/status",                         'eula-status.txt'),
+            ("/rest/appliance/firmware/notification",               'firmware-notification.txt'),
+            ("/rest/appliance/firmware/pending",                    'firmware-pending.txt'),
+            ("/rest/appliance/firmware/verificationKey",            'firmware-verificationkey.txt'),
+            ("/rest/appliance/ha-nodes",                            'ha-nodes.txt'),             # added to collect active/standby composer
+            ("/rest/appliance/health-status",                       'health-status.txt'),
+            ("/rest/appliance/network-interfaces",                  'network-interfaces.txt'),
     	    ("/rest/appliance/network-interfaces/mac-addresses",    'network-interfaces-mac.txt'),
-            ("/rest/appliance/nodeinfo/status",                'nodeinfo-status.txt'),
-            ("/rest/appliance/nodeinfo/version",               'nodeinfo-version.txt'),
-            ("/rest/appliance/notifications/email-config",      'notification-email-config.txt'),
+            ("/rest/appliance/nodeinfo/status",                     'nodeinfo-status.txt'),
+            ("/rest/appliance/nodeinfo/version",                    'nodeinfo-version.txt'),
+            ("/rest/appliance/notifications/email-config",          'notification-email-config.txt'),
     	    ("/rest/appliance/notifications/test-email-config",     'notification-test-email-config.txt'),
-            ("/rest/appliance/progress",                        'progress.txt'),
-            ("/rest/appliance/proxy-config",                    'proxy-config.txt'),                # added in v1.4
-            ("/rest/appliance/settings/serviceaccess",          'settings-serviceaccess.txt'),   # attention
+            ("/rest/appliance/progress",                            'progress.txt'),
+            ("/rest/appliance/proxy-config",                        'proxy-config.txt'),                # added in v1.4
+            ("/rest/appliance/settings/serviceaccess",              'settings-serviceaccess.txt'),   # attention
             ("/rest/appliance/snmpv3-trap-forwarding/destinations", 'snmpv3-destinations.txt'),      # added in v1.4
             ("/rest/appliance/snmpv3-trap-forwarding/users",        'snmpv3-users.txt'),          # added in v1.4
-            ("/rest/appliance/ssh-access",                      'ssh-access.txt'),
-            ("/rest/appliance/static-routes",                    'static-routes.txt'),          # v2.1
-            ("/rest/appliance/trap-destinations",               'trap-destinations.txt'),
-            ("/rest/backups",                                   'backups.txt'),
-    		("/rest/backups/config",                            'backups-config.txt'),
+            ("/rest/appliance/ssh-access",                          'ssh-access.txt'),
+            ("/rest/appliance/static-routes",                       'static-routes.txt'),          # v2.1
+            ("/rest/appliance/trap-destinations",                   'trap-destinations.txt'),
+            ("/rest/backups",                                       'backups.txt'),
+    		("/rest/backups/config",                                'backups-config.txt'),
             ("/rest/deployment-servers/image-streamer-appliances",  'image-streamer-appliances.txt'),    # added to collect IS appliance details
-            ("/rest/domains",                                   'domains.txt'),
-            ("/rest/domains/schema",                            'domains-schema.txt'),
-            ("/rest/firmware-drivers",                          'firmware-drivers.txt'),
-            ("/rest/global-settings",                           'global-settings.txt'),
-            ("/rest/hardware-compliance",                       'hardware-compliance.txt'),
-            ("/rest/hw-appliances",                             'hw-appliances.txt'),
-            ("/rest/index/resources?query=`"NOT scopeUris:NULL`"", 'scopes-resources.txt'),
-            ("/rest/licenses",                                  'licenses.txt'),
-    		("/rest/remote-syslog",                             'remote-syslog.txt'),
-            ("/rest/repositories",                              'repositories.txt'),                     # added in v1.4
-            ("/rest/restores",                                  'restores.txt'),
-    		("/rest/scopes",                                    'scopes.txt'),
-            ("/rest/updates",                                   'updates.txt'),                     # added in v3.1
-            ("/rest/update-settings/schedule",                  'update-settings-schedule.txt'),     # added in v3.1            
-            ("/rest/version",                                   'version.txt')
+            ("/rest/domains",                                       'domains.txt'),
+            ("/rest/domains/schema",                                'domains-schema.txt'),
+            ("/rest/firmware-drivers",                              'firmware-drivers.txt'),
+            ("/rest/global-settings",                               'global-settings.txt'),
+            ("/rest/hardware-compliance",                           'hardware-compliance.txt'),
+            ("/rest/hw-appliances",                                 'hw-appliances.txt'),
+            ("/rest/index/resources?query=`"NOT scopeUris:NULL`"",  'scopes-resources.txt'),
+            ("/rest/licenses",                                      'licenses.txt'),
+    		("/rest/remote-syslog",                                 'remote-syslog.txt'),
+            ("/rest/repositories",                                  'repositories.txt'),                     # added in v1.4
+            ("/rest/restores",                                      'restores.txt'),
+    		("/rest/scopes",                                        'scopes.txt'),
+            ("/rest/updates",                                       'updates.txt'),                     # added in v3.1
+            ("/rest/update-settings/schedule",                      'update-settings-schedule.txt'),     # added in v3.1            
+            ("/rest/version",                                       'version.txt')
 )
 
 #HP OneView Version
@@ -164,12 +165,9 @@ $networking = @(
             ("/rest/interconnect-link-topologies",    'interconnect-link-topologies.txt'),
             ("/rest/interconnect-types",              'interconnect-types.txt'),
     		("/rest/interconnects",                   'interconnects.txt'),
-            ("/rest/internal-link-sets",              'internal-link-sets.txt'),    # v2.1
     		("/rest/logical-downlinks",               'logical-downlinks.txt'),     # v2.1
     		("/rest/logical-interconnect-groups",     'logical-interconnect-groups.txt'),
     		("/rest/logical-interconnects",           'logical-interconnects.txt'),
-            ("/rest/logical-switch-groups",           'logical-switch-groups.txt'),       # added in v1.4
-            ("/rest/logical-switches",                'logical-switches.txt'),       # added in v1.4
     		("/rest/network-sets",                    'network-sets.txt'),
             ("/rest/switch-types",                    'switch-types.txt'),
   	        ("/rest/switches",                        'switches.txt'),
@@ -248,9 +246,9 @@ $sa = @(
             ("/rest/support/portal-registration",           'portal-registration.txt'),
             ("/rest/support/registration",                  'registration.txt'),
             ("/rest/support/schedules",                     'schedules.txt'),
-            ("/rest/support/sites/default",                 'sites-default.txt')
+            ("/rest/support/sites/default",                 'sites-default.txt'),
             # ("/rest/support/server-hardware",               'server-hardware.txt'),
-            # ("/rest/support/sites",                         'sites.txt')
+            ("/rest/support/sites",                         'sites.txt')
 )
 
 # id-pools
@@ -949,6 +947,13 @@ function extract_few_more_details()
 
     $resource = @('snapshots',  'storage-volumes-snapshots.txt')
     extract_data_by_uri_list -ResourceName "Storage" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
+
+    # Extract additional Datacenter Details
+    $uri_list = extract_resource_uri_list -RestUri "/rest/support/sites" -SearchField "dataCenterId" -UriLength 0
+    $uri_list = $uri_list | ForEach-Object { "/rest/support/datacenters/" + $_ ; }
+
+    $resource = @('', 'datacenters.txt')
+    extract_data_by_uri_list -ResourceName "Service-Automation" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
 
 }
 
