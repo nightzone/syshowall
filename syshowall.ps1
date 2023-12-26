@@ -949,8 +949,7 @@ function extract_few_more_details()
     extract_data_by_uri_list -ResourceName "Storage" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
 
     # Extract additional Datacenter Details
-    $uri_list = extract_resource_uri_list -RestUri "/rest/support/sites" -SearchField "dataCenterId" -UriLength 0
-    $uri_list = $uri_list | ForEach-Object { "/rest/support/datacenters/" + $_ ; }
+    $uri_list = extract_resource_uri_list -RestUri "/rest/datacenters" -SearchField "remoteSupportUri" -UriLength 0
 
     $resource = @('', 'datacenters.txt')
     extract_data_by_uri_list -ResourceName "Service-Automation" -FileName $resource[1] -UriList $uri_list -AppendUri $resource[0]
