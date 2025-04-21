@@ -31,9 +31,12 @@ Example:
 	PS C:\Temp\syshowall> .\syshowall.ps1
 	syshowall v4.0 PS - Synergy Configuration Collector
 
-	Appliance IP: 10.72.14.39
-	Login: Administrator
-	Password: ********
+	Appliance IP: 10.72.14.13
+
+	PowerShell credential request
+	Appliance credentials
+	User: Administrator
+	Password for user Administrator: ********
 
 For multiple appliances:
 - Create `iplist.txt` in script directory and put single Appliance IP per line.
