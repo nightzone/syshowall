@@ -1,6 +1,6 @@
 syshowall
 =========
-`syshowall v3.2 PS - Synergy Configuration Collector`
+`syshowall v4.0 PS - Synergy Configuration Collector`
 
 ### Features:
 * Collects HPE OneView or Global Dashboard Appliance configuration.
@@ -14,7 +14,8 @@ syshowall
 ### Usage:
 * Run `syshowall.ps1`
 	- Save, Clone or Copy `syshowall.ps1` script to your Windows PC
-	- Right click on script and select Run with PowerShell
+	- Run PowerShell Core 7.0 or higher
+	- Run script 
 
 * Enter required parameters:
 	- Appliance IP:&emsp;IP-address or hostname of Synergy Appliance
@@ -28,7 +29,7 @@ syshowall
 Example:
 
 	PS C:\Temp\syshowall> .\syshowall.ps1
-	syshowall v3.2 PS - Synergy Configuration Collector
+	syshowall v4.0 PS - Synergy Configuration Collector
 
 	Appliance IP: 10.72.14.39
 	Login: Administrator
@@ -44,10 +45,8 @@ Example of `iplist.txt`:
 	10.10.10.2
 
 ### Requirements:
-* Microsoft .NET 4.5 installed
-* Tested on Windows 10 and PowerShell 5.1
-* Tested on Windows Server 2022 and PowerShell 5.1
-* Tested on Windows Server 2012 R2 and PowerShell 4.0
+* PowerShell Core version 7.0 and higher
+* Tested on PowerShell 7.5
 
 ### Author:
 Sergii Oleshchenko<br/>
