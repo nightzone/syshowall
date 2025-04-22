@@ -9,6 +9,7 @@ iplist*.txt
 /result*
 /gdconf*
 /syconf*
+/.vscode*
 
 # ignore specific files
 *.zip
